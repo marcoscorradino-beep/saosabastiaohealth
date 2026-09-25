@@ -5,12 +5,18 @@ import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Dashboard from "./pages/Dashboard";
+import Landing from "./pages/Landing";
+import Admin from "./pages/Admin";
+import PublicDataset from "./pages/PublicDataset";
 
 
 function Router() {
   return (
     <Switch>
-      <Route path={"/:panelId?"} component={Dashboard} />
+      <Route path={"/"} component={Landing} />
+      <Route path={"/admin"} component={Admin} />
+      <Route path={"/dados/:datasetId"} component={PublicDataset} />
+      <Route path={"/:panelId"} component={Dashboard} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
@@ -27,7 +33,7 @@ function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider
-        defaultTheme="light"
+        defaultTheme="dark"
         // switchable
       >
         <TooltipProvider>

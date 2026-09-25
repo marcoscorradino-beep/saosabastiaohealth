@@ -28,3 +28,11 @@
 
 ## Observação técnica
 A compilação completa não pôde ser executada neste ambiente porque as dependências do projeto não estavam instaladas e o acesso ao registry.npmjs.org estava indisponível. A revisão estática do código foi concluída e o projeto mantém a estrutura React + TypeScript + Vite existente.
+
+### Telas públicas B1–B6, Territorial e Quadrimestral
+- Cards B1–B6 da tela inicial agora abrem páginas públicas próprias.
+- Territorial possui visão geral e detalhada.
+- Quadrimestral possui abas para Componente Qualidade e Vínculo/Acompanhamento Territorial.
+- Seletores de competência/quadrimestre e equipe, pesquisa por equipe/INE/CNES/indicador e impressão/PDF.
+- Dimensões, indicadores, métricas, nota final e classificação são exibidos quando presentes no CSV importado.
+- Nenhuma função administrativa é exposta nessas páginas.
