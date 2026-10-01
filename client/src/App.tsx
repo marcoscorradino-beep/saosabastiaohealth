@@ -9,8 +9,8 @@ import Landing from "./pages/Landing";
 import Admin from "./pages/Admin";
 import PublicDataset from "./pages/PublicDataset";
 
-
 function Router() {
+  // make sure to consider if you need authentication for certain routes
   return (
     <Switch>
       <Route path={"/"} component={Landing} />

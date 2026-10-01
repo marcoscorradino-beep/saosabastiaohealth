@@ -48,9 +48,9 @@ Configure no ambiente de produção:
 - `ADMIN_USER`: usuário administrativo (opcional; padrão `admin`).
 - `ADMIN_PASSWORD`: senha forte. **Obrigatória para habilitar o login**.
 - `SESSION_SECRET`: segredo longo e aleatório para assinar sessões. **Obrigatório**.
-- `DATA_DIR`: diretório persistente para `imports.json` (opcional; padrão `./data`).
+- `DATABASE_URL`: conexão MySQL/TiDB persistente fornecida pelo WebDev. **Obrigatória para armazenar dados importados e histórico**.
 
-Nunca coloque a senha no React, GitHub ou em arquivos públicos. Em produção, `DATA_DIR` precisa apontar para armazenamento persistente do provedor; se o ambiente de hospedagem usar disco efêmero, configure um volume/banco persistente antes de usar a importação como fonte definitiva.
+Nunca coloque a senha no React, GitHub ou em arquivos públicos. O importador não usa `DATA_DIR` nem `imports.json` em produção: datasets, linhas, histórico e substituições são gravados no banco nativo via Drizzle. A migration `drizzle/0000_pretty_the_santerians.sql` cria as tabelas persistentes necessárias.
 
 Fluxo: `/admin` → login → selecionar CSV SIAPS → validação → confirmação de substituição se a competência já existir → publicação imediata no painel público. Nesta versão o importador automático cobre C1–C7; B1–B6, CVAT e quadrimestral ficam preparados como módulos, mas precisam de parsers específicos antes de liberar upload administrativo desses formatos.
 
