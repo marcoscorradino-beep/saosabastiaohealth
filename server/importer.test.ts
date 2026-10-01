@@ -153,6 +153,35 @@ describe("SIAPS importer", () => {
     expect(() => parseSiaps("Visão Geral - Componente Qualidade.csv", content)).toThrow("Tipo de relatório não reconhecido");
   });
 
+
+  it("maps the real CVAT competence layout and preserves population-limit evidence", () => {
+    const csv = [
+      "Relatório CVAT - Visão por Competência",
+      "Competência selecionada: JUL/26",
+      "CNES;ESTABELECIMENTO;TIPO DO ESTABELECIMENTO;INE;NOME DA EQUIPE;SIGLA DA EQUIPE;PARÂMETRO POPULACIONAL;PESSOAS SOMENTE COM CADASTRO INDIVIDUAL;PESSOAS COM CADASTRO INDIVIDUAL E CADASTRO DOMICILIAR E TERRITORIAL;TOTAL DE PESSOAS COM CADASTRO (C = A + B);PESSOAS SEM CRITÉRIO;CRIANÇAS + PESSOAS IDOSAS;PESSOAS BENEFICIARIAS DO BPC OU PBF;PESSOAS IDOSAS OU CRIANÇAS + BPC OU PBF;TOTAL DE PESSOAS ACOMPANHADAS;ATENDIMENTOS SUJEITOS À AVALIAÇÃO DE SATISFAÇÃO;ATENDIMENTOS COM AVALIAÇÃO DE SATISFAÇÃO ;N DE PESSOAS VINCULADAS A EQUIPE;PONTUAÇÃO",
+      "2766132;USF BARRA DO SAI;CENTRO DE SAUDE/UNIDADE BASICA;0000370029;BARRA DO SAI;eSF;2750;178;3958;4136;1979;493;704;106;3282;2743;-;3282;10,00",
+      "3425274;USF CANTO DO MAR;CENTRO DE SAUDE/UNIDADE BASICA;0000370037;CANTO DO MAR;eSF;2750;104;4593;4697;2007;729;717;153;3606;2384;-;3606;10,00",
+      "4037669;USF PAUBA;CENTRO DE SAUDE/UNIDADE BASICA;0002295253;PAUBA;eSF;2750;4;1383;1387;549;189;152;28;918;872;-;918;4,00",
+    ].join("\n");
+    expect(detectPanel("relatorio-cvat-visao-competencia.csv", csv)).toBe("territorial");
+    const parsed = parseSiaps("relatorio-cvat-visao-competencia.csv", csv);
+    expect(parsed.datasetType).toBe("Vínculo e Acompanhamento Territorial — visão por competência");
+    expect(parsed.periods[0]?.competence).toBe("JUL/26");
+    expect(parsed.periods[0]?.rows).toHaveLength(3);
+    const barra = parsed.periods[0]?.rows.find(row => row.name === "BARRA DO SAI");
+    expect(barra).toMatchObject({ ine: "0000370029", cnes: "2766132", teamType: "eSF", value: 10, classification: "" });
+    expect(barra?.metrics).toEqual(expect.arrayContaining([
+      expect.objectContaining({ label: "Parâmetro populacional", value: 2750 }),
+      expect.objectContaining({ label: "Pessoas vinculadas", value: 3282 }),
+    ]));
+    const pauba = parsed.periods[0]?.rows.find(row => row.name === "PAUBA");
+    expect(pauba).toMatchObject({ value: 4 });
+    expect(pauba?.metrics).toEqual(expect.arrayContaining([
+      expect.objectContaining({ label: "Parâmetro populacional", value: 2750 }),
+      expect.objectContaining({ label: "Pessoas vinculadas", value: 918 }),
+    ]));
+  });
+
   it("splits Q1, Q2 and Q3 from one quadrimestral CSV and keeps dimensions", () => {
     const csv = [
       "Quadrimestre;CNES;Estabelecimento;INE;Tipo de Equipe;Nome da Equipe;Dimensão;Indicador;Resultado do Quadrimestre Média dos meses;Dimensão Cadastro;Dimensão Acompanhamento;Nota Final;Classificação Final",
