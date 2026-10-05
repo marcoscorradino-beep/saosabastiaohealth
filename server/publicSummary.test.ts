@@ -38,8 +38,52 @@ describe("public summary", () => {
     expect(result.rows.map(item => [item.position, item.name])).toEqual([[1, "B"], [2, "A"], [2, "C"]]);
   });
 
-  it("does not invent a quadrimestral oral ranking", () => {
-    const summary = buildPublicSummary({ b1: { "JUL/26": [row("B1", 3)] } });
+  it("deduplicates quadrimestral indicator rows by team before ranking", () => {
+    const datasets = { "quadrimestral-qualidade": {
+      "Q1/26": [
+        row("A", 1, "BOM", { ine: "INE-A", indicator: "C1", finalValue: 9, finalClassification: "ÓTIMO" }),
+        row("A", 2, "BOM", { ine: "INE-A", indicator: "C2", finalValue: 9, finalClassification: "ÓTIMO" }),
+        row("B", 3, "BOM", { ine: "INE-B", indicator: "C1", finalValue: 8, finalClassification: "BOM" }),
+      ],
+    } };
+
+    const result = buildQuadrimestreHighlight(datasets, "quadrimestral-qualidade", "eSF");
+
+    expect(result.totalRows).toBe(2);
+    expect(result.valueRows).toBe(2);
+    expect(result.rows.map(item => [item.position, item.name])).toEqual([[1, "A"], [2, "B"]]);
+  });
+
+  it("builds separate quadrimestral rankings for eSF and eSB", () => {
+    const datasets = { "quadrimestral-qualidade": {
+      "Q1/26": [
+        row("APS A", 1, "BOM", { ine: "SF-A", teamType: "eSF", finalValue: 7.5, finalClassification: "BOM" }),
+        row("APS B", 1, "BOM", { ine: "SF-B", teamType: "eSF", finalValue: 7.25, finalClassification: "BOM" }),
+        row("ESB A", 1, "ÓTIMO", { ine: "SB-A", teamType: "eSB", finalValue: 9.25, finalClassification: "ÓTIMO" }),
+        row("ESB A", 2, "ÓTIMO", { ine: "SB-A", teamType: "eSB", indicator: "B2", finalValue: 9.25, finalClassification: "ÓTIMO" }),
+        row("ESB B", 1, "BOM", { ine: "SB-B", teamType: "eSB", finalValue: 8.5, finalClassification: "BOM" }),
+      ],
+    } };
+
+    const summary = buildPublicSummary(datasets);
+
+    expect(summary.quadrimestral.aps.totalRows).toBe(2);
+    expect(summary.quadrimestral.aps.rows.map(item => item.name)).toEqual(["APS A", "APS B"]);
+
+    expect(summary.quadrimestral.oral.available).toBe(true);
+    expect(summary.quadrimestral.oral.totalRows).toBe(2);
+    expect(summary.quadrimestral.oral.rows.map(item => item.name)).toEqual(["ESB A", "ESB B"]);
+  });
+
+  it("keeps oral quadrimestral unavailable when no official eSB rows exist", () => {
+    const datasets = { "quadrimestral-qualidade": {
+      "Q1/26": [
+        row("APS A", 1, "BOM", { teamType: "eSF", finalValue: 7.5, finalClassification: "BOM" }),
+      ],
+    } };
+
+    const summary = buildPublicSummary(datasets);
+
     expect(summary.quadrimestral.oral.available).toBe(false);
     expect(summary.quadrimestral.oral.rows).toEqual([]);
   });

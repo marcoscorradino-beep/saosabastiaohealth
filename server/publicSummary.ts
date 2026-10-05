@@ -72,21 +72,53 @@ export function latestQuadrimestre(datasets: StoredStore["datasets"], panelId: s
   }).at(-1) || null;
 }
 
-export function buildQuadrimestreHighlight(datasets: StoredStore["datasets"], panelId: string) {
+export function buildQuadrimestreHighlight(
+  datasets: StoredStore["datasets"],
+  panelId: string,
+  teamType?: string,
+) {
   const competence = latestQuadrimestre(datasets, panelId);
-  const rows = competence ? datasets[panelId]?.[competence] || [] : [];
-  const eligible = rows.filter(row => typeof row.finalValue === "number" && Number.isFinite(row.finalValue));
-  const sorted = [...eligible].sort((a, b) => (b.finalValue! - a.finalValue!) || a.ine.localeCompare(b.ine));
+  const allRows = competence ? datasets[panelId]?.[competence] || [] : [];
+  const filteredRows = teamType ? allRows.filter(row => row.teamType === teamType) : allRows;
+
+  const uniqueRows = Array.from(
+    new Map(
+      filteredRows.map(row => [`${row.teamType}|${row.ine}`, row] as const),
+    ).values(),
+  );
+
+  const eligible = uniqueRows.filter(
+    row => typeof row.finalValue === "number" && Number.isFinite(row.finalValue),
+  );
+
+  const sorted = [...eligible].sort(
+    (a, b) => (b.finalValue! - a.finalValue!) || a.ine.localeCompare(b.ine),
+  );
+
   const output: Highlight[] = [];
   let previousValue: number | null = null;
   let previousPosition = 0;
+
   sorted.forEach((row, index) => {
     const position = row.finalValue === previousValue ? previousPosition : index + 1;
-    output.push({ position, name: row.name, ine: row.ine, value: row.finalValue!, classification: row.finalClassification || row.classification });
+    output.push({
+      position,
+      name: row.name,
+      ine: row.ine,
+      value: row.finalValue!,
+      classification: row.finalClassification || row.classification,
+    });
     previousValue = row.finalValue!;
     previousPosition = position;
   });
-  return { panelId, competence, totalRows: rows.length, valueRows: eligible.length, rows: output.filter(row => row.position <= 3) };
+
+  return {
+    panelId,
+    competence,
+    totalRows: uniqueRows.length,
+    valueRows: eligible.length,
+    rows: output.filter(row => row.position <= 3),
+  };
 }
 
 export function buildPublicSummary(datasets: StoredStore["datasets"]) {
@@ -97,13 +129,17 @@ export function buildPublicSummary(datasets: StoredStore["datasets"]) {
     aps: Object.fromEntries(APS_PANELS.map(panelId => [panelId, buildMonthlyHighlight(datasets, panelId, monthlyCompetence)])),
     oral: Object.fromEntries(ORAL_PANELS.map(panelId => [panelId, buildMonthlyHighlight(datasets, panelId, monthlyCompetence)])),
   } : null;
-  const quality = buildQuadrimestreHighlight(datasets, "quadrimestral-qualidade");
+  const qualityAps = buildQuadrimestreHighlight(datasets, "quadrimestral-qualidade", "eSF");
+  const qualityOral = buildQuadrimestreHighlight(datasets, "quadrimestral-qualidade", "eSB");
   return {
     monthly,
     quadrimestral: {
-      competence: quality.competence,
-      aps: quality,
-      oral: { available: false, competence: null, totalRows: 0, valueRows: 0, rows: [] },
+      competence: qualityAps.competence || qualityOral.competence,
+      aps: qualityAps,
+      oral: {
+        ...qualityOral,
+        available: qualityOral.valueRows > 0,
+      },
     },
   };
 }
