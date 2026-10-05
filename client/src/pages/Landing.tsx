@@ -19,7 +19,8 @@ const oralLabels: Record<string, string> = Object.fromEntries(oral.map(([code, t
 
 type Highlight = { position: number; name: string; ine: string; value: number; classification: string };
 type PanelHighlight = { panelId: string; competence: string; totalRows: number; valueRows: number; rows: Highlight[] };
-type Summary = { monthly: { competence: string; label: string; aps: Record<string, PanelHighlight>; oral: Record<string, PanelHighlight> } | null; quadrimestral: { competence: string | null; aps: PanelHighlight; oral: { available: boolean; rows: Highlight[] } } };
+type QuadrimestralOralHighlight = PanelHighlight & { available: boolean };
+type Summary = { monthly: { competence: string; label: string; aps: Record<string, PanelHighlight>; oral: Record<string, PanelHighlight> } | null; quadrimestral: { competence: string | null; aps: PanelHighlight; oral: QuadrimestralOralHighlight } };
 
 export default function Landing() {
   const [summary, setSummary] = useState<Summary | null>(null);
@@ -52,7 +53,7 @@ function HighlightsSection({ monthly, apsPanel, setApsPanel, oralPanel, setOralP
     <HighlightCard title={`Destaques APS — ${monthly?.competence || "sem competência"}`} options={Object.keys(apsLabels)} value={apsPanel} onChange={setApsPanel} labels={apsLabels} highlight={apsHighlight} href={`/${apsPanel}`} emptyText="Nenhum resultado APS disponível nesta competência." />
     <HighlightCard title={`Destaques Saúde Bucal — ${monthly?.competence || "sem competência"}`} options={Object.keys(oralLabels)} value={oralPanel} onChange={setOralPanel} labels={oralLabels} highlight={oralHighlight} href={`/dados/${oralPanel}`} emptyText="Nenhum resultado de Saúde Bucal disponível nesta competência." />
     <HighlightCard title={`Destaques APS — ${quadrimestre?.competence || "sem quadrimestre"}`} highlight={quadrimestre?.aps} href="/dados/quadrimestral-qualidade" quadrimestre emptyText="Nenhum resultado quadrimestral oficial disponível." />
-    <div className="rounded-2xl border border-violet-800/70 bg-[#07192b] p-5"><div className="flex items-center gap-3"><Heart className="h-6 w-6 text-violet-300"/><div><p className="text-xs uppercase tracking-wider text-violet-300">Destaques</p><h3 className="font-bold text-lg">Saúde Bucal — Quadrimestre</h3></div></div><div className="mt-5 rounded-xl border border-violet-800/50 bg-[#051426] p-4"><p className="font-semibold text-white">Aguardando dados oficiais</p><p className="mt-1 text-sm text-slate-400">O ranking será disponibilizado quando houver Nota Final quadrimestral oficial de Saúde Bucal importada.</p></div></div>
+    <HighlightCard title={`Destaques Saúde Bucal — ${quadrimestre?.competence || "sem quadrimestre"}`} highlight={quadrimestre?.oral.available ? quadrimestre.oral : undefined} href="/dados/quadrimestral-qualidade" quadrimestre emptyText="Nenhum resultado quadrimestral oficial de Saúde Bucal disponível." />
   </div></section>;
 }
 
