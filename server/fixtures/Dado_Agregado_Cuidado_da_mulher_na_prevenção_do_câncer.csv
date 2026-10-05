@@ -1,0 +1,45 @@
+﻿Ministério da Saúde - MS
+Secretaria de Atenção Primária à Saúde - Saps
+Sistema de Informação para a Atenção Primária à Saúde – Siaps
+Dado gerado em: 09 de setembro de 2026 - 14:29h
+Módulo Transferencia de arquivo - Componente Qualidade | Cuidado da mulher na prevenção do câncer
+Dado Preliminar
+
+Dados sociodemográficos:
+UF: SP
+Município: 355070 / SÃO SEBASTIÃO
+
+Filtro:
+Competência selecionada: JUN/26
+Indicador selecionado: Cuidado da mulher na prevenção do câncer
+Visualizacao: Monitoramento
+
+Competência/Ano;UF;IBGE Município;Nome Município;Condição de Equipe;CNES;ESTABELECIMENTO;TIPO DO ESTABELECIMENTO;INE;NOME DA EQUIPE;SIGLA DA EQUIPE;Ter pelo menos 01 (um) exame de rastreamento para câncer do colo do útero em mulheres entre 25 e 64 anos de idade, coletado, solicitado ou avaliado nos últimos 36 meses;Total de mulher entre 25 e 64 anos;Ter pelo menos 01 (uma) dose da vacina HPV para crianças e adolescentes do sexo feminino de 09 a 14 anos de idade;Total de crianças e Adolescentes do sexo feminino de 09 a 14 anos;Ter pelo 01 (um) atendimento presencial ou remoto, para adolescentes do sexo feminino e mulheres entre 14 e 69 anos de idade, sobre atenção à saúde sexual e reprodutiva, realizado nos últimos 12 meses;Total de mulher entre 14 e 69 anos;Ter registro de pelo menos 01 (um) exame de rastreamento para câncer de mama em mulheres entre 50 e 69 anos de idades, solicitado ou avaliado nos últimos 24 meses;Total de mulher entre 50 e 69 anos;RAZÃO ENTRE O NUMERADOR E DENOMINADOR;Classificação
+"JUN/26	";"SP	";"355070	";"SÃO SEBASTIÃO	";"Válida	";"9982280	";"USF CAMBURI II	";"02	";"0001696025	";"USF CAMBURI II	";"eSF	";"290	";"495	";"40	";"57	";"284	";"652	";"106	";"155	";"	";"	";"59,52	";"BOM	"
+"JUN/26	";"SP	";"355070	";"SÃO SEBASTIÃO	";"Válida	";"2765829	";"USF PONTAL DA CRUZ	";"02	";"0000369888	";"PONTAL DA CRUZ	";"eSF	";"331	";"800	";"50	";"65	";"49	";"1029	";"227	";"417	";"	";"	";"43,68	";"SUFICIENTE	"
+"JUN/26	";"SP	";"355070	";"SÃO SEBASTIÃO	";"Válida	";"9596712	";"USF BOICUCANGA II	";"02	";"0000369977	";"BOICUCANGA II	";"eSF	";"486	";"755	";"54	";"92	";"285	";"989	";"156	";"255	";"	";"	";"51,37	";"BOM	"
+"JUN/26	";"SP	";"355070	";"SÃO SEBASTIÃO	";"Válida	";"2765896	";"USF MARESIAS I	";"02	";"0000369985	";"MARESIAS I	";"eSF	";"282	";"702	";"82	";"117	";"165	";"927	";"95	";"183	";"	";"	";"44,78	";"SUFICIENTE	"
+"JUN/26	";"SP	";"355070	";"SÃO SEBASTIÃO	";"Válida	";"2765799	";"USF ITATINGA I	";"02	";"0000369942	";"ITATINGA I	";"eSF	";"298	";"687	";"68	";"85	";"30	";"888	";"125	";"256	";"	";"	";"43,46	";"SUFICIENTE	"
+"JUN/26	";"SP	";"355070	";"SÃO SEBASTIÃO	";"Válida	";"9968768	";"USF SAO FRANCISCO	";"02	";"0001692887	";"SAO FRANCISCO	";"eSF	";"212	";"573	";"32	";"53	";"110	";"736	";"85	";"322	";"	";"	";"35,27	";"SUFICIENTE	"
+"JUN/26	";"SP	";"355070	";"SÃO SEBASTIÃO	";"Válida	";"2765837	";"USF ITATINGA II	";"02	";"0000369926	";"ITATINGA II	";"eSF	";"238	";"607	";"73	";"89	";"136	";"834	";"66	";"211	";"	";"	";"43,60	";"SUFICIENTE	"
+"JUN/26	";"SP	";"355070	";"SÃO SEBASTIÃO	";"Válida	";"9597603	";"USF MARESIAS II	";"02	";"0000369993	";"MARESIAS II	";"eSF	";"233	";"601	";"51	";"74	";"72	";"775	";"63	";"209	";"	";"	";"37,25	";"SUFICIENTE	"
+"JUN/26	";"SP	";"355070	";"SÃO SEBASTIÃO	";"Válida	";"2765845	";"USF VARADOURO	";"02	";"0000369950	";"VARADOURO	";"eSF	";"271	";"681	";"47	";"72	";"81	";"890	";"169	";"299	";"	";"	";"41,57	";"SUFICIENTE	"
+"JUN/26	";"SP	";"355070	";"SÃO SEBASTIÃO	";"Válida	";"2765780	";"USF CENTRO	";"02	";"0000369845	";"CENTRO	";"eSF	";"286	";"503	";"30	";"43	";"62	";"643	";"173	";"256	";"	";"	";"48,71	";"SUFICIENTE	"
+"JUN/26	";"SP	";"355070	";"SÃO SEBASTIÃO	";"Válida	";"2765756	";"USF BARRA DO UNA	";"02	";"0000369810	";"BARRA DO UNA	";"eSF	";"251	";"538	";"58	";"77	";"291	";"694	";"120	";"168	";"	";"	";"58,80	";"BOM	"
+"JUN/26	";"SP	";"355070	";"SÃO SEBASTIÃO	";"Válida	";"7470134	";"USF JUQUEI II	";"02	";"0001519824	";"JUQUEI II	";"eSF	";"227	";"527	";"62	";"87	";"176	";"696	";"63	";"144	";"	";"	";"46,33	";"SUFICIENTE	"
+"JUN/26	";"SP	";"355070	";"SÃO SEBASTIÃO	";"Válida	";"2766124	";"USF BAREQUECABA	";"02	";"0000370010	";"BAREQUECABA	";"eSF	";"216	";"384	";"31	";"40	";"57	";"502	";"113	";"178	";"	";"	";"50,61	";"BOM	"
+"JUN/26	";"SP	";"355070	";"SÃO SEBASTIÃO	";"Válida	";"9597174	";"USF BOICUCANGA I	";"02	";"0000369969	";"BOICUCANGA I	";"eSF	";"465	";"648	";"48	";"75	";"444	";"862	";"149	";"218	";"	";"	";"62,67	";"BOM	"
+"JUN/26	";"SP	";"355070	";"SÃO SEBASTIÃO	";"Válida	";"2765764	";"USF BORACEIA	";"02	";"0000369829	";"BORACEIA	";"eSF	";"330	";"600	";"73	";"92	";"53	";"811	";"87	";"222	";"	";"	";"44,60	";"SUFICIENTE	"
+"JUN/26	";"SP	";"355070	";"SÃO SEBASTIÃO	";"Válida	";"3425274	";"USF CANTO DO MAR	";"02	";"0000370037	";"CANTO DO MAR	";"eSF	";"631	";"1176	";"121	";"159	";"168	";"1556	";"219	";"456	";"	";"	";"46,41	";"SUFICIENTE	"
+"JUN/26	";"SP	";"355070	";"SÃO SEBASTIÃO	";"Válida	";"2766132	";"USF BARRA DO SAI	";"02	";"0000370029	";"BARRA DO SAI	";"eSF	";"346	";"1025	";"121	";"161	";"258	";"1369	";"78	";"318	";"	";"	";"39,86	";"SUFICIENTE	"
+"JUN/26	";"SP	";"355070	";"SÃO SEBASTIÃO	";"Válida	";"4538218	";"USF MARESIAS III	";"02	";"0002439026	";"MARESIAS III	";"eSF	";"247	";"645	";"59	";"73	";"145	";"835	";"123	";"230	";"	";"	";"47,82	";"SUFICIENTE	"
+"JUN/26	";"SP	";"355070	";"SÃO SEBASTIÃO	";"Válida	";"2766094	";"USF OLARIA	";"02	";"0000369934	";"OLARIA	";"eSF	";"220	";"608	";"57	";"72	";"208	";"809	";"142	";"229	";"	";"	";"51,10	";"BOM	"
+"JUN/26	";"SP	";"355070	";"SÃO SEBASTIÃO	";"Válida	";"2765802	";"USF JARAGUA	";"02	";"0000369853	";"JARAGUA	";"eSF	";"535	";"1015	";"113	";"144	";"160	";"1364	";"183	";"384	";"	";"	";"47,13	";"SUFICIENTE	"
+"JUN/26	";"SP	";"355070	";"SÃO SEBASTIÃO	";"Válida	";"4037669	";"USF PAUBA	";"02	";"0002295253	";"PAUBA	";"eSF	";"170	";"314	";"26	";"33	";"52	";"391	";"106	";"141	";"	";"	";"53,50	";"BOM	"
+"JUN/26	";"SP	";"355070	";"SÃO SEBASTIÃO	";"Válida	";"9597670	";"USF MORRO DO ABRIGO	";"02	";"0000370002	";"MORRO DO ABRIGO	";"eSF	";"253	";"733	";"69	";"104	";"88	";"945	";"29	";"308	";"	";"	";"31,47	";"SUFICIENTE	"
+"JUN/26	";"SP	";"355070	";"SÃO SEBASTIÃO	";"Válida	";"9597654	";"USF ENSEADA I	";"02	";"0000369896	";"ENSEADA I	";"eSF	";"387	";"700	";"67	";"85	";"228	";"936	";"204	";"291	";"	";"	";"56,04	";"BOM	"
+"JUN/26	";"SP	";"355070	";"SÃO SEBASTIÃO	";"Válida	";"2765810	";"USF JUQUEI I	";"02	";"0000369861	";"JUQUEI I	";"eSF	";"166	";"320	";"15	";"32	";"113	";"408	";"86	";"137	";"	";"	";"45,30	";"SUFICIENTE	"
+"JUN/26	";"SP	";"355070	";"SÃO SEBASTIÃO	";"Válida	";"2765772	";"USF CAMBURI I	";"02	";"0000369837	";"CAMBURI I	";"eSF	";"230	";"652	";"66	";"108	";"119	";"846	";"78	";"209	";"	";"	";"37,07	";"SUFICIENTE	"
+"JUN/26	";"SP	";"355070	";"SÃO SEBASTIÃO	";"Válida	";"9592768	";"USF ENSEADA II	";"02	";"0000369918	";"ENSEADA II	";"eSF	";"324	";"593	";"33	";"47	";"247	";"766	";"129	";"280	";"	";"	";"50,87	";"BOM	"
+
+Fonte: Sistema de Informação para a Atenção Primária à Saúde - SIAPS

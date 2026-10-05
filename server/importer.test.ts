@@ -55,6 +55,24 @@ describe("SIAPS importer", () => {
 	    expect(parsed.periods[0]?.competence).toBe("JUL/26");
   });
 
+  it("parses historical C7 aggregate rows with shifted result and classification columns", () => {
+    const filename = "Dado_Agregado_Cuidado_da_mulher_na_prevenção_do_câncer.csv";
+    const content = fs.readFileSync(new URL(`./fixtures/${filename}`, import.meta.url), "utf8");
+    const parsed = parseSiaps(filename, content);
+    expect(detectPanel(filename, content)).toBe("cancer");
+    expect(parsed.panelId).toBe("cancer");
+    expect(parsed.datasetType).toBe("APS cancer");
+    expect(parsed.periods[0]?.competence).toBe("JUN/26");
+    expect(parsed.periods[0]?.rows).toHaveLength(26);
+    expect(parsed.periods[0]?.rows.slice(0, 3)).toMatchObject([
+      { name: "USF CAMBURI II", ine: "0001696025", value: 59.52, classification: "BOM" },
+      { name: "PONTAL DA CRUZ", ine: "0000369888", value: 43.68, classification: "SUFICIENTE" },
+      { name: "BOICUCANGA II", ine: "0000369977", value: 51.37, classification: "BOM" },
+    ]);
+    expect(parsed.periods[0]?.rows[0]?.metrics).toHaveLength(8);
+    expect(parsed.periods[0]?.rows[0]?.metrics?.at(-1)).toEqual({ label: "Total de mulher entre 50 e 69 anos", value: 155 });
+  });
+
   it("applies the non-monotonic C1 methodological bands", () => {
     for (const [value, expected] of [[10, "REGULAR"], [10.01, "SUFICIENTE"], [30, "SUFICIENTE"], [30.01, "BOM"], [50, "BOM"], [50.01, "ÓTIMO"], [70, "ÓTIMO"], [70.01, "REGULAR"]] as const) {
       expect(classifyApsValue("acesso", value)).toBe(expected);
