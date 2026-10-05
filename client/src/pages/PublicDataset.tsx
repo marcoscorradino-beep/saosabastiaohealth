@@ -20,6 +20,7 @@ export default function PublicDataset() {
   const [location] = useLocation(); const id = location.split("/").filter(Boolean).pop() || "b1"; const def = defs[id];
   const [data, setData] = useState<Record<string, Row[]>>({}); const [period, setPeriod] = useState(""); const [query, setQuery] = useState(""); const [team, setTeam] = useState("all"); const [teamType, setTeamType] = useState("all");
   useEffect(() => { if (!def) return; fetch(`/api/data/${id}`).then((response) => response.ok ? response.json() : {}).then((json) => setData(json || {})).catch(() => setData({})); }, [id]);
+  useEffect(() => { setTeam("all"); setTeamType("all"); setQuery(""); }, [id]);
   const periods = useMemo(() => Object.keys(data).sort(periodSort), [data]); useEffect(() => { if (periods.length && !periods.includes(period)) setPeriod(periods[0]); }, [periods, id]);
   const allRows = data[period] || [];
   const availableTeamTypes = Array.from(new Set(allRows.map((row) => row.teamType).filter(Boolean))).sort();
