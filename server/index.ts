@@ -70,16 +70,48 @@ export function detectPanel(filename:string,content:string){return detect(filena
  if(!competence||!parseMonthlyCompetence(competence)||!rows.length)throw new Error("Não foi possível identificar uma competência mensal válida/equipes.");return {panelId:d.id,datasetType:d.type,competence,rows};}
 function parseQuadrimestral(filename:string,content:string,d:{id:string,type:string}){
  const lines=content.replace(/^\uFEFF/,"").split(/\r?\n/).filter(Boolean),hi=findHeader(lines,true);if(hi<0)throw new Error("Cabeçalho quadrimestral não reconhecido.");
- const h=parseLine(lines[hi]),b=baseIndexes(h),iQ=idx(h,"Quadrimestre"),iCad=idx(h,"Dimensão Cadastro"),iAcomp=idx(h,"Dimensão Acompanhamento"),iDim=idx(h,"Dimensão"),iInd=idx(h,"Indicador"),iResult=idx(h,"Resultado do Quadrimestre Média dos meses"),iDimClass=idx(h,"Classificação final da Dimensão"),iConcept=idx(h,"Conceito obtido do indicador no quadrimestre"),iFinal=idx(h,"Nota Final","Nota final da equipe","NOTA FINAL DA EQUIPE"),iFinalClass=idx(h,"Classificação Final","Classificação final","CLASSIFICAÇÃO FINAL");
+ const h=parseLine(lines[hi]),b=baseIndexes(h),iQ=idx(h,"Quadrimestre"),iCad=idx(h,"Dimensão Cadastro"),iAcomp=idx(h,"Dimensão Acompanhamento"),iDim=idx(h,"Dimensão"),iInd=idx(h,"Indicador"),iResult=idx(h,"Resultado do Quadrimestre Média dos meses"),iDimClass=idx(h,"Classificação final da Dimensão"),iConcept=idx(h,"Conceito obtido do indicador no quadrimestre"),iFinal=idx(h,"Nota Final","Nota final da equipe","NOTA FINAL DA EQUIPE"),iFinalClass=idx(h,"Classificação Final","Classificação final","CLASSIFICAÇÃO FINAL"),iSigla=idx(h,"Sigla da Equipe","SIGLA DA EQUIPE"),teamIx=iSigla>=0?iSigla:b.team;
  if(iQ<0||[b.cnes,b.est,b.ine,b.name].some(i=>i<0)||iFinal<0||iFinalClass<0)throw new Error("Colunas quadrimestrais obrigatórias não encontradas.");
+
  const byPeriod:Record<string,Row[]>={};
+ const totals=new Map<string,{finalValue:number|null,finalClassification:string}>();
+ const teamPeriod=new Map<string,string>();
+
  for(const line of lines.slice(hi+1)){
-  const c=parseLine(line),period=clean(c[iQ]||""),ine=clean(c[b.ine]||"");if(!/^Q[1-3]\/\d{2}$/i.test(period)||!ine)continue;
-  const finalValue=num(c[iFinal]),finalClassification=clean(c[iFinalClass]);
-  const metrics:Metric[]=[];if(iCad>=0)metrics.push({label:"Dimensão Cadastro",value:num(c[iCad])});if(iAcomp>=0)metrics.push({label:"Dimensão Acompanhamento",value:num(c[iAcomp])});
-  const value=iResult>=0?num(c[iResult]):finalValue,classification=iConcept>=0?clean(c[iConcept]):iDimClass>=0?clean(c[iDimClass]):finalClassification;
-  (byPeriod[period]??=[]).push({ine,cnes:clean(c[b.cnes]),establishment:clean(c[b.est]),name:clean(c[b.name]),teamType:b.team>=0?clean(c[b.team]):"",value,classification,practices:[],metrics,dimension:iDim>=0?clean(c[iDim]):undefined,indicator:iInd>=0?clean(c[iInd]):undefined,finalValue,finalClassification});
+  const c=parseLine(line),period=clean(c[iQ]||""),ine=clean(c[b.ine]||"");if(!ine)continue;
+
+  if(/^Q[1-3]\/\d{2}$/i.test(period)){
+   teamPeriod.set(ine,period);
+   const finalValue=num(c[iFinal]),finalClassification=clean(c[iFinalClass]);
+   const metrics:Metric[]=[];if(iCad>=0)metrics.push({label:"Dimensão Cadastro",value:num(c[iCad])});if(iAcomp>=0)metrics.push({label:"Dimensão Acompanhamento",value:num(c[iAcomp])});
+   const value=iResult>=0?num(c[iResult]):finalValue,classification=iConcept>=0?clean(c[iConcept]):iDimClass>=0?clean(c[iDimClass]):finalClassification;
+   (byPeriod[period]??=[]).push({ine,cnes:clean(c[b.cnes]),establishment:clean(c[b.est]),name:clean(c[b.name]),teamType:teamIx>=0?clean(c[teamIx]):"",value,classification,practices:[],metrics,dimension:iDim>=0?clean(c[iDim]):undefined,indicator:iInd>=0?clean(c[iInd]):undefined,finalValue,finalClassification});
+   continue;
+  }
+
+  if(d.id==="quadrimestral-qualidade"&&normalizeText(period)==="total"){
+   const inferredPeriod=teamPeriod.get(ine);
+   if(inferredPeriod){
+    totals.set(`${inferredPeriod}|${ine}`,{
+     finalValue:num(c[iFinal]),
+     finalClassification:clean(c[iFinalClass]),
+    });
+   }
+  }
  }
+
+ if(d.id==="quadrimestral-qualidade"){
+  for(const [period,rows] of Object.entries(byPeriod)){
+   for(const row of rows){
+    const total=totals.get(`${period}|${row.ine}`);
+    if(total){
+     row.finalValue=total.finalValue;
+     row.finalClassification=total.finalClassification;
+    }
+   }
+  }
+ }
+
  const periods=Object.keys(byPeriod).sort((a,b)=>{const [qa,ya]=a.slice(1).split('/').map(Number),[qb,yb]=b.slice(1).split('/').map(Number);return ya-yb||qa-qb});
  if(!periods.length)throw new Error("Não foi possível identificar quadrimestres/equipes.");
  return {panelId:d.id,datasetType:d.type,periods:periods.map(competence=>({competence,rows:byPeriod[competence]}))};

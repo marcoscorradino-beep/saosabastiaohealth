@@ -200,6 +200,22 @@ describe("SIAPS importer", () => {
     ]));
   });
 
+  it("associa nota e classificacao da linha Total aos indicadores do quadrimestral de Qualidade", () => {
+    const csv = [
+      "Quadrimestre;UF;Cód IBGE;MUNICÍPIO;CNES;ESTABELECIMENTO;INE;NOME DA EQUIPE;Sigla da Equipe;Indicador;Resultado do Quadrimestre Média dos meses;Conceito obtido do indicador no quadrimestre;Conceito obtido do indicador no quadrimestre - Variável numérica;peso do indicador;Nota do indicador;NOTA FINAL DA EQUIPE;CLASSIFICAÇÃO FINAL",
+      "Q1/26;SP;355070;SÃO PAULO;2766124;USF BAREQUECABA;0000370010;BAREQUECABA;eSF;Mais Acesso à APS;48.01;BOM;0.75;1;0.75;-;-",
+      "Q1/26;SP;355070;SÃO PAULO;2766124;USF BAREQUECABA;0000370010;BAREQUECABA;eSF;Cuidado no desenvolvimento infantil;52.5;BOM;0.75;2;1.5;-;-",
+      "Total;-;-;-;2766124;USF BAREQUECABA;0000370010;BAREQUECABA;eSF;Nota final e classificação final;-;-;-;-;-;7.25;BOM",
+    ].join("\n");
+
+    const parsed = parseSiaps("Dado_Agregado_Quadrimestre_Qualidade.csv", csv);
+    expect(parsed.periods).toHaveLength(1);
+    expect(parsed.periods[0]?.competence).toBe("Q1/26");
+    expect(parsed.periods[0]?.rows).toHaveLength(2);
+    expect(parsed.periods[0]?.rows.every(row => row.finalValue === 7.25)).toBe(true);
+    expect(parsed.periods[0]?.rows.every(row => row.finalClassification === "BOM")).toBe(true);
+  });
+
   it("splits Q1, Q2 and Q3 from one quadrimestral CSV and keeps dimensions", () => {
     const csv = [
       "Quadrimestre;CNES;Estabelecimento;INE;Tipo de Equipe;Nome da Equipe;Dimensão;Indicador;Resultado do Quadrimestre Média dos meses;Dimensão Cadastro;Dimensão Acompanhamento;Nota Final;Classificação Final",
