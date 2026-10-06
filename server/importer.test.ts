@@ -73,6 +73,34 @@ describe("SIAPS importer", () => {
     expect(parsed.periods[0]?.rows[0]?.metrics?.at(-1)).toEqual({ label: "Total de mulher entre 50 e 69 anos", value: 155 });
   });
 
+  it("parses compact oral aggregate rows with result and classification shifted left", () => {
+    const csv = [
+      "Ministério da Saúde - MS",
+      "Módulo Transferencia de arquivo - Componente Qualidade | Primeira consulta odontológica programada",
+      "Competência selecionada: JAN/26",
+      "Indicador selecionado: Primeira consulta odontológica programada",
+      "Competência/Ano;UF;IBGE Município;Nome Município;Condição de Equipe;CNES;ESTABELECIMENTO;TIPO DO ESTABELECIMENTO;INE;NOME DA EQUIPE;SIGLA DA EQUIPE;Ter a 1ª consulta odontológica programática realizada pela eSB.;Nº total de pessoas com primeira consulta odontológica programática realizadas pela eSB;Nº total de pessoas vinculadas à eSF/eAP da eSB de referência;RAZÃO ENTRE O NUMERADOR E DENOMINADOR;Classificação",
+      "JAN/26;SP;355070;SÃO SEBASTIÃO; - ;4538218;USF ITATINGA I;02;0001844660;ESB ITATINGA I;eSB;1;1387;1,73;ÓTIMO",
+    ].join("\n");
+
+    const parsed = parseSiaps(
+      "Dado_Agregado_Primeira_consulta_odontológica_programada.csv",
+      csv,
+    );
+
+    expect(parsed.panelId).toBe("b1");
+    expect(parsed.periods[0]?.competence).toBe("JAN/26");
+    expect(parsed.periods[0]?.rows).toHaveLength(1);
+    expect(parsed.periods[0]?.rows[0]).toMatchObject({
+      cnes: "4538218",
+      ine: "0001844660",
+      name: "ESB ITATINGA I",
+      teamType: "eSB",
+      value: 1.73,
+      classification: "ÓTIMO",
+    });
+  });
+
   it("applies the non-monotonic C1 methodological bands", () => {
     for (const [value, expected] of [[10, "REGULAR"], [10.01, "SUFICIENTE"], [30, "SUFICIENTE"], [30.01, "BOM"], [50, "BOM"], [50.01, "ÓTIMO"], [70, "ÓTIMO"], [70.01, "REGULAR"]] as const) {
       expect(classifyApsValue("acesso", value)).toBe(expected);
