@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useRoute } from "wouter";
 import DataTable from "@/components/DataTable";
 import RankingView from "@/components/RankingView";
+import CompetenceEvolutionChart from "@/components/CompetenceEvolutionChart";
+import { buildCompetenceEvolution } from "@/lib/competenceEvolution";
 import { classificationKey } from "@/components/ClassificationBadge";
 import { allPanels } from "@/lib/mockData";
 import { siapsData, SiapsPanelId } from "@/lib/siapsData";
@@ -31,6 +33,18 @@ export default function Dashboard() {
   const [team, setTeam] = useState("all");
   const [view, setView] = useState<"table" | "ranking">("table");
   const rows = (combined[competence] || []) as readonly any[];
+  const evolutionPeriods = useMemo(
+    () => Object.keys(combined).sort((a, b) => -sortComp(a, b)),
+    [combined],
+  );
+  const evolutionPoints = useMemo(
+    () => buildCompetenceEvolution(combined, evolutionPeriods, team),
+    [combined, evolutionPeriods, team],
+  );
+  const selectedTeamName = team === "all"
+    ? undefined
+    : (Object.values(combined).flat() as any[])
+        .find((row) => row.ine === team)?.name;
   const filtered = useMemo(() => {
     const needle = query.trim().toLocaleLowerCase("pt-BR");
     return rows.filter((row) => (team === "all" || row.ine === team) && (!needle || `${row.name} ${row.establishment} ${row.ine} ${row.cnes}`.toLocaleLowerCase("pt-BR").includes(needle)));
@@ -51,6 +65,10 @@ export default function Dashboard() {
         <label className="block text-sm font-semibold text-slate-200">Buscar equipe, estabelecimento ou INE<div className="relative mt-2"><Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-sky-300" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Digite para filtrar..." className="w-full rounded-lg border border-sky-800 bg-[#03111f] py-2.5 pl-9 pr-3 text-slate-100 placeholder:text-slate-500 outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20" /></div></label>
         <div className="flex gap-2"><button onClick={() => setView("table")} className={`rounded-lg px-4 py-2.5 font-semibold ${view === "table" ? "bg-sky-600 text-white" : "border border-sky-700 bg-[#0b2943] text-sky-100"}`}>Equipes</button><button onClick={() => setView("ranking")} className={`rounded-lg px-4 py-2.5 font-semibold ${view === "ranking" ? "bg-sky-600 text-white" : "border border-sky-700 bg-[#0b2943] text-sky-100"}`}>Ranking</button></div>
       </div></section>
+      <CompetenceEvolutionChart
+        points={evolutionPoints}
+        teamName={selectedTeamName}
+      />
       <section className="mb-8 grid grid-cols-2 gap-3 md:grid-cols-4">{classCards.map(([label, tone]) => { const count = classes[label] || 0; const pct = rows.length ? (count / rows.length) * 100 : 0; return <div key={label} className={`rounded-xl border p-4 ${tone}`}><p className="text-xs font-bold uppercase tracking-wider">{label}</p><div className="mt-1 flex items-end justify-between gap-2"><p className="text-2xl font-black text-white">{count}</p><p className="text-sm font-semibold">{pct.toFixed(1)}%</p></div><div className="mt-3 h-1.5 rounded-full bg-slate-950/30"><div className="h-1.5 rounded-full bg-current opacity-80" style={{ width: `${pct}%` }} /></div></div>; })}</section>
       {practices.length > 0 && <section className="mb-7"><div className="mb-3 flex items-center gap-2"><BarChart3 className="h-5 w-5 text-cyan-300" /><h2 className="text-lg font-bold text-white">Boas práticas registradas</h2></div><div className="grid grid-cols-1 gap-3 md:grid-cols-2">{practices.map((practice: any, index: number) => <div key={index} className="rounded-xl border border-sky-800/70 bg-[#071c30] p-4"><p className="text-sm font-medium text-slate-100">{practice.label}</p><p className="mt-2 text-xs text-slate-300">Média de registros por equipe: <b className="text-white">{practice.avg.toFixed(1)}</b></p></div>)}</div></section>}
       <section><div className="mb-4 flex flex-col justify-between gap-2 sm:flex-row sm:items-end"><div><h2 className="text-xl font-bold text-white">Resultados por equipe</h2><p className="mt-1 text-sm text-slate-300">{filtered.length} de {rows.length} equipe(s) exibida(s) • valores conforme o arquivo SIAPS.</p></div><span className="text-xs font-semibold uppercase tracking-wider text-sky-300">{view === "table" ? "Visão em tabela" : "Visão em ranking"}</span></div>{view === "table" ? <DataTable rows={filtered} /> : <RankingView rows={filtered} />}</section>
