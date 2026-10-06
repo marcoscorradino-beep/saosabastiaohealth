@@ -104,9 +104,23 @@ export function readLocalCsvStore(directory: string): StoredStore {
     }
   }
 
+  return selectLocalCandidates(candidates);
+}
+
+export function selectLocalCandidates(candidates: Candidate[]): StoredStore {
   const selected = new Map<string, Candidate>();
 
+  const qualityGroups = new Map<string, Candidate[]>();
+
   for (const candidate of candidates) {
+    if (candidate.panelId === "quadrimestral-qualidade") {
+      const key = `${candidate.panelId}|${candidate.competence}`;
+      const items = qualityGroups.get(key) ?? [];
+      items.push(candidate);
+      qualityGroups.set(key, items);
+      continue;
+    }
+
     const key = `${candidate.panelId}|${candidate.competence}`;
     const current = selected.get(key);
 
@@ -115,24 +129,79 @@ export function readLocalCsvStore(directory: string): StoredStore {
     }
   }
 
+  for (const [groupKey, items] of Array.from(qualityGroups.entries())) {
+    const mixed = items
+      .filter((item) => {
+        const types = new Set(
+          item.rows.map((row) => row.teamType).filter(Boolean),
+        );
+        return types.size > 1;
+      })
+      .sort((a, b) => priority(b) - priority(a))[0];
+
+    if (mixed) {
+      selected.set(groupKey, mixed);
+      continue;
+    }
+
+    const byTeamType = new Map<string, Candidate>();
+
+    for (const item of items) {
+      const types = Array.from(
+        new Set(item.rows.map((row) => row.teamType).filter(Boolean)),
+      );
+
+      if (types.length !== 1) continue;
+
+      const teamType = types[0];
+      const current = byTeamType.get(teamType);
+
+      if (!current || priority(item) > priority(current)) {
+        byTeamType.set(teamType, item);
+      }
+    }
+
+    for (const [teamType, item] of Array.from(byTeamType.entries())) {
+      selected.set(`${groupKey}|${teamType}`, item);
+    }
+  }
+
   const datasets: StoredStore["datasets"] = {};
   const history: StoredStore["history"] = [];
 
-  for (const item of Array.from(selected.values())) {
-    datasets[item.panelId] ??= {};
-    datasets[item.panelId][item.competence] = item.rows;
+  const grouped = new Map<string, Candidate[]>();
 
-    history.push({
-      id: `local:${item.panelId}:${item.competence}`,
-      filename: item.filename,
-      panelId: item.panelId,
-      datasetType: item.datasetType,
-      competence: item.competence,
-      rows: item.rows.length,
-      importedAt: new Date(item.mtime).toISOString(),
-      user: "local-csv",
-      replaced: false,
-    });
+  for (const item of Array.from(selected.values())) {
+    const key = `${item.panelId}|${item.competence}`;
+    const items = grouped.get(key) ?? [];
+    items.push(item);
+    grouped.set(key, items);
+  }
+
+  for (const items of Array.from(grouped.values())) {
+    const first = items[0];
+
+    const combinedRows =
+      first.panelId === "quadrimestral-qualidade" && items.length > 1
+        ? items.flatMap((item) => item.rows)
+        : first.rows;
+
+    datasets[first.panelId] ??= {};
+    datasets[first.panelId][first.competence] = combinedRows;
+
+    for (const item of items) {
+      history.push({
+        id: `local:${item.panelId}:${item.competence}:${item.filename}`,
+        filename: item.filename,
+        panelId: item.panelId,
+        datasetType: item.datasetType,
+        competence: item.competence,
+        rows: item.rows.length,
+        importedAt: new Date(item.mtime).toISOString(),
+        user: "local-csv",
+        replaced: false,
+      });
+    }
   }
 
   history.sort((a, b) => b.importedAt.localeCompare(a.importedAt));
