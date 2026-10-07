@@ -32,3 +32,25 @@ export function getImportReplacementScope(
   // o mesmo tipo de equipe, preservando o tipo complementar.
   return { mode: "teamTypes", teamTypes };
 }
+
+export function hasImportReplacementConflict(
+  panelId: string,
+  incomingRows: readonly ImportRow[],
+  existingRows: readonly ImportRow[],
+): boolean {
+  if (existingRows.length === 0) {
+    return false;
+  }
+
+  const replacementScope = getImportReplacementScope(panelId, incomingRows);
+
+  if (replacementScope.mode === "period") {
+    return true;
+  }
+
+  const replacementTeamTypes = new Set(replacementScope.teamTypes);
+
+  return existingRows.some(row =>
+    replacementTeamTypes.has(String(row.teamType ?? "").trim()),
+  );
+}
