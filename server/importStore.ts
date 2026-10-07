@@ -1,7 +1,8 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { getDb } from "./db";
 import { healthDatasetRows, importHistory } from "../drizzle/schema";
 import { classifyApsValue } from "@shared/apsMethodology";
+import { getImportReplacementScope } from "./importReplacement";
 
 export type StoredMetric = {
   label: string;
@@ -112,11 +113,24 @@ export async function saveImport(params: {
   const db = await requireDb();
   await db.transaction(async tx => {
     for (const period of params.periods) {
+      const replacementScope = getImportReplacementScope(
+        params.panelId,
+        period.rows,
+      );
+
+      const replacementConditions = [
+        eq(healthDatasetRows.panelId, params.panelId),
+        eq(healthDatasetRows.competence, period.competence),
+      ];
+
+      if (replacementScope.mode === "teamTypes") {
+        replacementConditions.push(
+          inArray(healthDatasetRows.teamType, replacementScope.teamTypes),
+        );
+      }
+
       await tx.delete(healthDatasetRows).where(
-        and(
-          eq(healthDatasetRows.panelId, params.panelId),
-          eq(healthDatasetRows.competence, period.competence),
-        ),
+        and(...replacementConditions),
       );
       if (period.rows.length) {
         await tx.insert(healthDatasetRows).values(
