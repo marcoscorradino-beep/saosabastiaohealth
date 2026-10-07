@@ -19,9 +19,11 @@ const fmt = (value: number | null | undefined) =>
 export default function CompetenceEvolutionChart({
   points,
   teamName,
+  periodLabel = "competência",
 }: {
   points: EvolutionPoint[];
   teamName?: string;
+  periodLabel?: "competência" | "quadrimestre";
 }) {
   const validPoints = points.filter(
     (point) => typeof point.value === "number" && Number.isFinite(point.value),
@@ -39,12 +41,16 @@ export default function CompetenceEvolutionChart({
       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
         <div>
           <h2 className="text-xl font-bold text-white">
-            Evolução por competência
+            Evolução por {periodLabel}
           </h2>
           <p className="mt-1 text-sm text-slate-300">
-            {teamName
-              ? `Resultados da equipe ${teamName} nas competências disponíveis.`
-              : "Média municipal dos resultados nas competências disponíveis."}
+            {periodLabel === "quadrimestre"
+              ? teamName
+                ? `Resultados da equipe ${teamName} nos quadrimestres disponíveis.`
+                : "Média municipal dos resultados nos quadrimestres disponíveis."
+              : teamName
+                ? `Resultados da equipe ${teamName} nas competências disponíveis.`
+                : "Média municipal dos resultados nas competências disponíveis."}
           </p>
         </div>
 
@@ -109,8 +115,15 @@ export default function CompetenceEvolutionChart({
       </div>
 
       <p className="mt-3 text-xs text-slate-400">
-        São exibidas somente as competências disponíveis na base. Competências
-        ausentes não são consideradas como resultado zero.
+        {periodLabel === "quadrimestre" ? (
+          <>
+            São exibidos somente os quadrimestres disponíveis na base. Quadrimestres ausentes não são considerados como resultado zero.
+          </>
+        ) : (
+          <>
+            São exibidas somente as competências disponíveis na base. Competências ausentes não são consideradas como resultado zero.
+          </>
+        )}
       </p>
     </section>
   );

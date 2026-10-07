@@ -8,6 +8,7 @@ import { shouldShowPopulationLimitAlert } from "@shared/territorialMethodology";
 import { groupQuadrimestralRows } from "@/lib/quadrimestralGrouping";
 import CompetenceEvolutionChart from "@/components/CompetenceEvolutionChart";
 import { buildCompetenceEvolution } from "@/lib/competenceEvolution";
+import { buildQuadrimestralEvolution } from "@/lib/quadrimestralEvolution";
 
 type Metric = { label: string; value: number | null; text?: string };
 type Row = { ine: string; cnes: string; establishment: string; name: string; teamType: string; value: number | null; classification: string; practices?: { label: string; value: number | null }[]; metrics?: Metric[]; dimension?: string; indicator?: string; finalValue?: number | null; finalClassification?: string };
@@ -30,8 +31,11 @@ export default function PublicDataset() {
   const rows = def?.kind === "quadrimestral" && teamType !== "all" ? allRows.filter((row) => row.teamType === teamType) : allRows;
   const teams = useMemo(() => Array.from(new Map(rows.map((row) => [row.ine, row])).values()).sort((a, b) => a.name.localeCompare(b.name, "pt-BR")), [rows]);
   const evolutionPoints = useMemo(
-    () => buildCompetenceEvolution(data, periods, team),
-    [data, periods, team],
+    () =>
+      def?.kind === "quadrimestral"
+        ? buildQuadrimestralEvolution(data, periods, team, teamType)
+        : buildCompetenceEvolution(data, periods, team),
+    [data, periods, team, teamType, def?.kind],
   );
   const selectedTeamName = team === "all"
     ? undefined
@@ -74,10 +78,11 @@ export default function PublicDataset() {
         {def.kind !== "territorial" && <section className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">{classCards.map(([label, tone]) => { const count = classes[label] || 0; const pctBase = def.kind === "quadrimestral" ? uniqueTeams : rows.length; const pct = pctBase ? count / pctBase * 100 : 0; return <div key={label} className={`rounded-xl border p-4 ${tone}`}><p className="text-xs font-bold uppercase tracking-wider">{label}</p><div className="mt-1 flex items-end justify-between"><p className="text-2xl font-black text-white">{count}</p><p className="text-sm font-semibold">{pct.toFixed(1)}%</p></div><div className="mt-3 h-1.5 rounded-full bg-slate-950/30"><div className="h-1.5 rounded-full bg-current opacity-80" style={{ width: `${pct}%` }} /></div></div>; })}</section>}
         {scoreBands.length > 0 && <section className="mt-5 rounded-2xl border border-sky-800/70 bg-[#071c30] p-5"><div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-end"><div><h2 className="text-xl font-bold text-white">Pontuação</h2><p className="mt-1 text-sm text-slate-300">Faixas metodológicas específicas deste indicador.</p></div><span className="text-xs text-slate-400">Classificação calculada conforme Nota Metodológica oficial do indicador.</span></div><div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{scoreBands.map((band) => <div key={band.label} className="rounded-xl border border-sky-800/70 bg-[#0b2943] p-4"><p className="text-sm font-bold text-white">{band.label}</p><p className="mt-1 text-sm text-sky-200">{band.rule}</p></div>)}</div></section>}
         <section className={`no-print mt-5 grid gap-3 rounded-2xl border border-sky-800/70 bg-[#071c30] p-4 ${def.kind === "quadrimestral" && availableTeamTypes.length > 1 ? "md:grid-cols-4" : "md:grid-cols-3"}`}>{def.kind === "quadrimestral" && availableTeamTypes.length > 1 && <label className="text-xs font-semibold text-slate-200">Tipo de equipe<select value={teamType} onChange={(event) => { setTeamType(event.target.value); setTeam("all"); }} className="mt-2 w-full rounded-lg border border-sky-800 bg-[#03111f] px-3 py-2.5 text-slate-100 outline-none focus:border-cyan-400"><option value="all">Todas</option>{availableTeamTypes.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>}<label className="text-xs font-semibold text-slate-200">Período<select value={period} onChange={(event) => { setPeriod(event.target.value); setTeam("all"); setTeamType("all"); }} className="mt-2 w-full rounded-lg border border-sky-800 bg-[#03111f] px-3 py-2.5 text-slate-100 outline-none focus:border-cyan-400">{periods.map((item) => <option key={item}>{item}</option>)}</select></label><label className="text-xs font-semibold text-slate-200">Equipe<select value={team} onChange={(event) => setTeam(event.target.value)} className="mt-2 w-full rounded-lg border border-sky-800 bg-[#03111f] px-3 py-2.5 text-slate-100 outline-none focus:border-cyan-400"><option value="all">Todas as equipes</option>{teams.map((item) => <option value={item.ine} key={item.ine}>{item.name}</option>)}</select></label><label className="text-xs font-semibold text-slate-200">Buscar equipe, estabelecimento ou INE<div className="relative mt-2"><Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-sky-300" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Digite para filtrar..." className="w-full rounded-lg border border-sky-800 bg-[#03111f] py-2.5 pl-9 pr-3 text-slate-100 placeholder:text-slate-500 outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20" /></div></label></section>
-        {(def.kind === "oral" || id === "territorial") && (
+        {(def.kind === "oral" || id === "territorial" || def.kind === "quadrimestral") && (
           <CompetenceEvolutionChart
             points={evolutionPoints}
             teamName={selectedTeamName}
+            periodLabel={def.kind === "quadrimestral" ? "quadrimestre" : "competência"}
           />
         )}
         {isQuadrimestral ? <section className="mt-5 space-y-4" aria-labelledby="quadrimestral-results-title">
