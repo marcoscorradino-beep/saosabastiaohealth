@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useRoute } from "wouter";
+import { Link, useRoute } from "wouter";
 import DataTable from "@/components/DataTable";
 import RankingView from "@/components/RankingView";
 import CompetenceEvolutionChart from "@/components/CompetenceEvolutionChart";
@@ -34,6 +34,13 @@ export default function Dashboard() {
   const [team, setTeam] = useState("all");
   const [view, setView] = useState<"table" | "ranking">("table");
   const rows = (combined[competence] || []) as readonly any[];
+  const teamOptions = useMemo(
+    () =>
+      Array.from(new Map(rows.map((row: any) => [row.ine, row])).values())
+        .sort((a: any, b: any) => formatUnitName(a.name).localeCompare(formatUnitName(b.name), "pt-BR"))
+        .map((row: any) => [row.ine, formatUnitName(row.name)]),
+    [rows],
+  );
   const evolutionPeriods = useMemo(
     () => Object.keys(combined).sort((a, b) => -sortComp(a, b)),
     [combined],
@@ -60,11 +67,26 @@ export default function Dashboard() {
   return <div className="min-h-screen bg-[#03111f] text-slate-100">
     <header className="sticky top-0 z-40 border-b border-sky-900/60 bg-[#041525] no-print"><div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6"><a href="/"><img src="/images/logos_institucionais.png" className="h-14 w-auto object-contain sm:h-16" alt="Logos institucionais" /></a><a href="/" className="text-sm text-sky-300 hover:text-white">← Tela inicial</a></div></header>
     <main className="mx-auto max-w-7xl px-4 py-7 sm:px-6">
-      <section className="mb-7 flex flex-col justify-between gap-5 lg:flex-row lg:items-end"><div><div className="mb-2 flex items-center gap-2 text-sm font-semibold text-sky-300"><LayoutDashboard className="h-4 w-4" /> {panel.code} • Indicadores São Sebastião - SP</div><h1 className="text-2xl font-bold text-white sm:text-3xl">{panel.description}</h1><p className="mt-2 text-slate-300">Dados preliminares importados dos relatórios SIAPS fornecidos pelo município.</p></div><button onClick={() => window.print()} className="no-print flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2.5 font-semibold text-white hover:bg-sky-500"><Download className="h-4 w-4" /> Imprimir / Salvar PDF</button></section>
+      <section className="mb-7 flex flex-col justify-between gap-5 lg:flex-row lg:items-end"><div><div className="mb-2 flex items-center gap-2 text-sm font-semibold text-sky-300"><LayoutDashboard className="h-4 w-4" /> Indicadores Atenção Básica</div><h1 className="text-2xl font-bold text-white sm:text-3xl">{panel.code} • {panel.description}</h1><p className="mt-2 text-slate-300">Dados preliminares importados dos relatórios SIAPS fornecidos pelo município.</p></div><button onClick={() => window.print()} className="no-print flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2.5 font-semibold text-white hover:bg-sky-500"><Download className="h-4 w-4" /> Imprimir / Salvar PDF</button></section>
       <section className="mb-7 grid grid-cols-2 gap-4 lg:grid-cols-4"><Card label="Competência" value={competence} /><Card label="Equipes" value={String(rows.length)} /><Card label="Média das equipes" value={`${avg.toFixed(2)}%`} /><Card label="Classificações" value={String(Object.keys(classes).length)} /></section>
+      <nav className="no-print mb-7 grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7" aria-label="Indicadores da Atenção Básica">
+        {allPanels.map((item) => <Link
+          key={item.id}
+          href={`/${item.id}`}
+          aria-current={panelId === item.id ? "page" : undefined}
+          className={`group flex min-h-36 flex-col rounded-xl border p-4 transition ${panelId === item.id ? "border-cyan-400 bg-cyan-950/40 shadow-lg shadow-cyan-950/20" : "border-sky-800/80 bg-[#071c30] hover:-translate-y-0.5 hover:border-sky-500 hover:bg-[#0a2138]"}`}
+        >
+          <div className="flex items-center justify-between gap-2">
+            <b className={`text-2xl ${panelId === item.id ? "text-cyan-200" : "text-sky-300"}`}>{item.code}</b>
+            {panelId === item.id && <span className="rounded-full border border-cyan-500/50 bg-cyan-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-cyan-200">Selecionado</span>}
+          </div>
+          <h3 className="mt-3 text-sm font-bold leading-tight text-white">{item.title}</h3>
+          <p className="mt-2 text-xs leading-relaxed text-slate-400">{item.description}</p>
+        </Link>)}
+      </nav>
       <section className="no-print mb-7 rounded-2xl border border-sky-800/70 bg-[#071c30] p-5 shadow-lg shadow-slate-950/20"><div className="grid grid-cols-1 items-end gap-4 md:grid-cols-2 lg:grid-cols-[1fr_1fr_1.3fr_auto]">
         <Select label="Competência" value={competence} onChange={(value) => { setCompetence(value); setTeam("all"); }} options={comps.map((item) => [item, item])} />
-        <Select label="Equipe" value={team} onChange={setTeam} options={[["all", "Todas as equipes"], ...rows.map((row: any) => [row.ine, formatUnitName(row.name)])]} />
+        <Select label="Equipe" value={team} onChange={setTeam} options={[["all", "Todas as equipes"], ...teamOptions]} />
         <label className="block text-sm font-semibold text-slate-200">Buscar equipe, estabelecimento ou INE<div className="relative mt-2"><Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-sky-300" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Digite para filtrar..." className="w-full rounded-lg border border-sky-800 bg-[#03111f] py-2.5 pl-9 pr-3 text-slate-100 placeholder:text-slate-500 outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20" /></div></label>
         <div className="flex gap-2"><button onClick={() => setView("table")} className={`rounded-lg px-4 py-2.5 font-semibold ${view === "table" ? "bg-sky-600 text-white" : "border border-sky-700 bg-[#0b2943] text-sky-100"}`}>Equipes</button><button onClick={() => setView("ranking")} className={`rounded-lg px-4 py-2.5 font-semibold ${view === "ranking" ? "bg-sky-600 text-white" : "border border-sky-700 bg-[#0b2943] text-sky-100"}`}>Ranking</button></div>
       </div></section>
