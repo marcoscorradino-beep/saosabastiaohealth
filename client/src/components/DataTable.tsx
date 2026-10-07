@@ -1,4 +1,5 @@
 import ClassificationBadge from "@/components/ClassificationBadge";
+import { formatUnitName } from "@/lib/unitName";
 
 interface Row {
   ine: string;
@@ -33,7 +34,7 @@ export default function DataTable({ rows }: { rows: readonly Row[] }) {
                   index % 2 ? "bg-[#061a2c]" : "bg-[#08223a]"
                 }`}
               >
-                <td className="px-5 py-4 font-semibold text-white">{row.name}</td>
+                <td className="px-5 py-4 font-semibold text-white">{formatUnitName(row.name)}</td>
                 <td className="px-5 py-4 font-mono text-xs text-sky-200">{row.ine}</td>
                 <td className="px-5 py-4 text-slate-200">
                   <div>{row.establishment}</div>

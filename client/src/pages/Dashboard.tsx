@@ -4,6 +4,7 @@ import DataTable from "@/components/DataTable";
 import RankingView from "@/components/RankingView";
 import CompetenceEvolutionChart from "@/components/CompetenceEvolutionChart";
 import { buildCompetenceEvolution } from "@/lib/competenceEvolution";
+import { formatUnitName } from "@/lib/unitName";
 import { classificationKey } from "@/components/ClassificationBadge";
 import { allPanels } from "@/lib/mockData";
 import { siapsData, SiapsPanelId } from "@/lib/siapsData";
@@ -43,8 +44,10 @@ export default function Dashboard() {
   );
   const selectedTeamName = team === "all"
     ? undefined
-    : (Object.values(combined).flat() as any[])
-        .find((row) => row.ine === team)?.name;
+    : formatUnitName(
+        (Object.values(combined).flat() as any[])
+          .find((row) => row.ine === team)?.name,
+      );
   const filtered = useMemo(() => {
     const needle = query.trim().toLocaleLowerCase("pt-BR");
     return rows.filter((row) => (team === "all" || row.ine === team) && (!needle || `${row.name} ${row.establishment} ${row.ine} ${row.cnes}`.toLocaleLowerCase("pt-BR").includes(needle)));
@@ -61,7 +64,7 @@ export default function Dashboard() {
       <section className="mb-7 grid grid-cols-2 gap-4 lg:grid-cols-4"><Card label="Competência" value={competence} /><Card label="Equipes" value={String(rows.length)} /><Card label="Média das equipes" value={`${avg.toFixed(2)}%`} /><Card label="Classificações" value={String(Object.keys(classes).length)} /></section>
       <section className="no-print mb-7 rounded-2xl border border-sky-800/70 bg-[#071c30] p-5 shadow-lg shadow-slate-950/20"><div className="grid grid-cols-1 items-end gap-4 md:grid-cols-2 lg:grid-cols-[1fr_1fr_1.3fr_auto]">
         <Select label="Competência" value={competence} onChange={(value) => { setCompetence(value); setTeam("all"); }} options={comps.map((item) => [item, item])} />
-        <Select label="Equipe" value={team} onChange={setTeam} options={[["all", "Todas as equipes"], ...rows.map((row: any) => [row.ine, row.name])]} />
+        <Select label="Equipe" value={team} onChange={setTeam} options={[["all", "Todas as equipes"], ...rows.map((row: any) => [row.ine, formatUnitName(row.name)])]} />
         <label className="block text-sm font-semibold text-slate-200">Buscar equipe, estabelecimento ou INE<div className="relative mt-2"><Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-sky-300" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Digite para filtrar..." className="w-full rounded-lg border border-sky-800 bg-[#03111f] py-2.5 pl-9 pr-3 text-slate-100 placeholder:text-slate-500 outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20" /></div></label>
         <div className="flex gap-2"><button onClick={() => setView("table")} className={`rounded-lg px-4 py-2.5 font-semibold ${view === "table" ? "bg-sky-600 text-white" : "border border-sky-700 bg-[#0b2943] text-sky-100"}`}>Equipes</button><button onClick={() => setView("ranking")} className={`rounded-lg px-4 py-2.5 font-semibold ${view === "ranking" ? "bg-sky-600 text-white" : "border border-sky-700 bg-[#0b2943] text-sky-100"}`}>Ranking</button></div>
       </div></section>

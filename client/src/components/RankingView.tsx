@@ -1,4 +1,5 @@
 import ClassificationBadge from "@/components/ClassificationBadge";
+import { formatUnitName } from "@/lib/unitName";
 
 interface Row {
   ine: string;
@@ -25,7 +26,7 @@ export default function RankingView({ rows }: { rows: readonly Row[] }) {
             {index + 1}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="truncate font-semibold text-white">{row.name}</p>
+            <p className="truncate font-semibold text-white">{formatUnitName(row.name)}</p>
             <div className="mt-1">
               <ClassificationBadge text={row.classification} />
             </div>
