@@ -6,6 +6,7 @@ import crypto from "crypto";
 import { readStore, saveImport } from "./importStore";
 import { hasImportReplacementConflict } from "./importReplacement";
 import { buildPublicSummary } from "./publicSummary";
+import { buildRegionalComparisonFromDirectory } from "./regionalComparisonStore";
 import { readLocalCsvStore } from "./localCsvStore";
 
 const __filename=fileURLToPath(import.meta.url),__dirname=path.dirname(__filename);
@@ -43,6 +44,12 @@ export function registerLegacyRoutes(app:express.Express){
  app.post("/api/admin/import",auth,async(req,res)=>{try{const filename=String(req.body?.filename||""),content=String(req.body?.content||"");if(!filename.toLowerCase().endsWith(".csv"))return res.status(400).json({error:"Selecione um arquivo CSV."});if(!content||content.length>12_000_000)return res.status(400).json({error:"Arquivo vazio ou acima de 12 MB."});const p=parseSiaps(filename,content),s=await readStore();s.datasets[p.panelId]??={};const conflicts=p.periods.filter(x=>hasImportReplacementConflict(p.panelId,x.rows,s.datasets[p.panelId][x.competence]??[])).map(x=>x.competence);const summary={panelId:p.panelId,datasetType:p.datasetType,competence:p.periods.length===1?p.periods[0].competence:`${p.periods.length} quadrimestres`,periods:p.periods.map(x=>({competence:x.competence,rows:x.rows.length,replaced:conflicts.includes(x.competence)})),rows:p.periods.reduce((n,x)=>n+x.rows.length,0),replaced:conflicts.length>0};if(conflicts.length&&!req.body?.overwrite)return res.status(409).json({error:`${p.datasetType}: já existem dados correspondentes para ${conflicts.join(", ")}. Confirme a substituição desses dados.`,needsOverwrite:true,summary});await saveImport({filename,panelId:p.panelId,datasetType:p.datasetType,periods:p.periods,user:(req as any).adminUser,replacedPeriods:new Set(conflicts)});res.json({ok:true,summary})}catch(e:any){res.status(400).json({error:e?.message||"Falha ao importar CSV."})}});
  app.get("/api/data/:panelId",async(req,res)=>{res.setHeader("Cache-Control","no-store");res.json((await readPublicStore()).datasets[req.params.panelId]||{})});
  app.get("/api/public/summary",async(_req,res)=>{try{res.setHeader("Cache-Control","no-store");res.json(buildPublicSummary((await readPublicStore()).datasets));}catch(e:any){res.status(503).json({error:e?.message||"Dados persistidos indisponíveis."})}});
+ app.get("/api/public/comparativo",async(_req,res)=>{try{
+  res.setHeader("Cache-Control","no-store");
+  const directory=process.env.LOCAL_DATA_DIR;
+  if(!directory)return res.status(503).json({error:"Fonte do comparativo regional ainda não configurada."});
+  res.json(buildRegionalComparisonFromDirectory(directory));
+ }catch(e:any){res.status(503).json({error:e?.message||"Comparativo regional indisponível."})}});
 }
 
 export async function startServer(){const app=express(),server=createServer(app);app.disable("x-powered-by");app.use(express.json({limit:"15mb"}));registerLegacyRoutes(app);

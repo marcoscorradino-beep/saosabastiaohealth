@@ -9,6 +9,7 @@ import Dashboard from "./pages/Dashboard";
 import Landing from "./pages/Landing";
 import Admin from "./pages/Admin";
 import PublicDataset from "./pages/PublicDataset";
+import Comparativo from "./pages/Comparativo";
 
 function Router() {
   const [location] = useLocation();
@@ -23,6 +24,7 @@ function Router() {
       <Route path={"/"} component={Landing} />
       <Route path={"/admin"} component={Admin} />
       <Route path={"/dados/:datasetId"} component={PublicDataset} />
+      <Route path={"/comparativo"} component={Comparativo} />
       <Route path={"/:panelId"} component={Dashboard} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}

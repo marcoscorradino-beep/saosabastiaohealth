@@ -3,6 +3,8 @@ import { Link } from "wouter";
 import { classifyOralValue, type OralPanelId } from "@shared/oralMethodology";
 import { Activity, BarChart3, FileBarChart, Heart, Home, Info, MapPinned, Moon, Stethoscope, ChevronRight, Baby, PersonStanding, Ribbon, Droplets, Smile, ExternalLink } from "lucide-react";
 import { formatUnitName } from "@/lib/unitName";
+import ClassificationBadge from "@/components/ClassificationBadge";
+import { ArrowUpRight, ArrowDownRight, Minus } from "lucide-react";
 
 const aps = [
   ["C1", "Mais Acesso à APS", "Acesso e utilização dos serviços", "/acesso", "acesso", "text-sky-400", "border-sky-500/30", "APS"],
@@ -19,7 +21,7 @@ const oral = [
 const apsLabels: Record<string, string> = Object.fromEntries(aps.map(([code, title, , , id]) => [id, `${code} — ${title}`]));
 const oralLabels: Record<string, string> = Object.fromEntries(oral.map(([code, title, , id]) => [id, `${code} — ${title}`]));
 
-type Highlight = { position: number; name: string; ine: string; value: number; classification: string };
+type Highlight = { position: number; name: string; ine: string; value: number; classification: string; movement?: number | null };
 type PanelHighlight = { panelId: string; competence: string; totalRows: number; valueRows: number; rows: Highlight[] };
 type QuadrimestralOralHighlight = PanelHighlight & { available: boolean };
 type Summary = { monthly: { competence: string; label: string; aps: Record<string, PanelHighlight>; oral: Record<string, PanelHighlight> } | null; quadrimestral: { competence: string | null; aps: PanelHighlight; oral: QuadrimestralOralHighlight } };
@@ -41,7 +43,7 @@ export default function Landing() {
       <section className="grid xl:grid-cols-[1fr_360px] gap-7 items-start mb-8"><div><p className="text-sky-400 tracking-[.3em] uppercase text-xs font-bold mb-3">Bem-vindo ao</p><h1 className="text-3xl md:text-5xl font-black tracking-tight">Dashboard de Indicadores de Saúde</h1><p className="text-xl md:text-2xl text-sky-200 mt-2">São Sebastião – SP</p><p className="max-w-3xl text-slate-400 mt-5 leading-relaxed">Acompanhe os resultados das equipes de Saúde da Família e dos indicadores de saúde do município, com base nos dados do SIAPS/e-SUS APS.</p></div><div className="rounded-2xl border border-sky-800/70 bg-[#071c30] p-5"><div className="flex gap-4 items-center"><BarChart3 className="w-9 h-9 text-sky-400"/><div><p className="text-xs text-sky-300">Dados de referência</p><p className="font-bold text-lg">{monthlyLabel}</p></div></div><div className="border-t border-sky-900 mt-4 pt-4 text-xs text-slate-400 flex gap-2"><Info className="w-4 h-4 shrink-0 text-sky-400"/>Dados provenientes dos relatórios persistidos do SIAPS/e-SUS APS. Dado preliminar.</div></div></section>
       <HighlightsSection monthly={monthly} apsPanel={apsPanel} setApsPanel={setApsPanel} oralPanel={oralPanel} setOralPanel={setOralPanel} apsHighlight={apsHighlight} oralHighlight={oralHighlight} quadrimestre={quadrimestre} />
       <h2 className="text-2xl font-bold mb-5">Indicadores e Componentes</h2>
-      <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-5">
         <Link href="/acesso" className="group min-h-64 rounded-2xl border border-sky-700/70 bg-[#061829] p-6 flex flex-col hover:-translate-y-1 hover:bg-[#0a2138] hover:border-sky-400 transition">
           <div className="flex items-center justify-between">
             <div className="rounded-full border border-sky-500/70 bg-sky-500/10 p-3"><Stethoscope className="w-8 h-8 text-sky-400"/></div>
@@ -69,6 +71,16 @@ export default function Landing() {
           <span className="mt-auto pt-8 inline-flex items-center gap-1 text-sm font-semibold text-violet-300">Acessar <ChevronRight className="w-4 h-4"/></span>
         </Link>
 
+        <Link href="/comparativo" className="group min-h-64 rounded-2xl border border-emerald-700/70 bg-[#07192b] p-6 flex flex-col hover:-translate-y-1 hover:bg-[#0a2138] hover:border-emerald-400 transition">
+          <div className="flex items-center justify-between">
+            <div className="rounded-full border border-emerald-500/70 bg-emerald-500/10 p-3"><BarChart3 className="w-8 h-8 text-emerald-400"/></div>
+            <span className="text-xs font-bold uppercase tracking-wider text-emerald-300">Regional</span>
+          </div>
+          <h3 className="mt-6 text-2xl font-bold text-white">Comparativo Regional</h3>
+          <p className="mt-3 text-sm leading-relaxed text-slate-400">Compare São Sebastião com o Litoral Norte, Estado de São Paulo e Brasil.</p>
+          <span className="mt-auto pt-8 inline-flex items-center gap-1 text-sm font-semibold text-emerald-300">Comparar indicadores <ChevronRight className="w-4 h-4"/></span>
+        </Link>
+
         <Link href="/dados/quadrimestral-qualidade" className="group min-h-64 rounded-2xl border border-orange-700/70 bg-[#07192b] p-6 flex flex-col hover:-translate-y-1 hover:bg-[#0a2138] hover:border-orange-400 transition">
           <div className="rounded-full border border-orange-500/70 bg-orange-500/10 p-3 w-fit"><FileBarChart className="w-8 h-8 text-orange-400"/></div>
           <h3 className="mt-6 text-2xl font-bold text-white">Relatório Quadrimestral</h3>
@@ -91,5 +103,30 @@ function HighlightsSection({ monthly, apsPanel, setApsPanel, oralPanel, setOralP
 
 function HighlightCard({ title, options, value, onChange, labels, highlight, href, quadrimestre = false, oralPanelId, emptyText }: { title: string; options?: string[]; value?: string; onChange?: (value: string) => void; labels?: Record<string, string>; highlight?: PanelHighlight; href: string; quadrimestre?: boolean; oralPanelId?: OralPanelId; emptyText: string }) {
   const shown = highlight?.rows || [];
-  return <div className="rounded-2xl border border-sky-800/70 bg-[#061829] p-5"><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-xs uppercase tracking-wider text-sky-300">{quadrimestre ? "Nota Final oficial" : "Resultado oficial"}</p><h3 className="font-bold text-lg text-white">{title}</h3></div>{options && <div className="flex flex-wrap gap-2" role="group" aria-label="Selecionar indicador">{options.map(option => { const fullLabel = labels?.[option] || option; const code = fullLabel.split("—")[0].trim(); return <button key={option} type="button" title={fullLabel} aria-pressed={value === option} onClick={() => onChange?.(option)} className={`min-w-11 rounded-lg border px-3 py-2 text-sm font-bold transition-colors ${value === option ? "border-cyan-400 bg-cyan-950/50 text-cyan-100" : "border-sky-800 bg-[#03111f] text-slate-300 hover:border-sky-500 hover:text-white"}`}>{code}</button>; })}</div>}</div>{highlight && <p className="mt-3 text-xs text-slate-400">{highlight.valueRows} de {highlight.totalRows} equipes com resultado</p>}<div className="mt-4 space-y-2">{shown.map(row => <div key={`${row.ine}-${row.position}`} className="flex items-center gap-3 rounded-xl border border-sky-900/70 bg-[#081d31] px-3 py-2.5"><span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sky-500/15 text-sm font-bold text-sky-100">{row.position}º</span><div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold text-white">{formatUnitName(row.name)}</p><p className="text-xs text-slate-400">{row.classification || (oralPanelId ? classifyOralValue(oralPanelId, row.value) : "") || "Classificação não informada"}</p></div><b className="text-sm text-white">{row.value.toFixed(2)}</b></div>)}{!shown.length && <p className="rounded-xl border border-sky-900/70 bg-[#051426] p-4 text-sm text-slate-400">{emptyText}</p>}</div><Link href={href} className="mt-4 inline-flex items-center gap-1 text-xs font-semibold text-sky-300 hover:text-white">Ver análise completa <ExternalLink className="h-3 w-3"/></Link></div>;
+  return <div className="rounded-2xl border border-sky-800/70 bg-[#061829] p-5"><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-xs uppercase tracking-wider text-sky-300">{quadrimestre ? "Nota Final oficial" : "Resultado oficial"}</p><h3 className="font-bold text-lg text-white">{title}</h3></div>{options && <div className="flex flex-wrap gap-2" role="group" aria-label="Selecionar indicador">{options.map(option => { const fullLabel = labels?.[option] || option; const code = fullLabel.split("—")[0].trim(); return <button key={option} type="button" title={fullLabel} aria-pressed={value === option} onClick={() => onChange?.(option)} className={`min-w-11 rounded-lg border px-3 py-2 text-sm font-bold transition-colors ${value === option ? "border-cyan-400 bg-cyan-950/50 text-cyan-100" : "border-sky-800 bg-[#03111f] text-slate-300 hover:border-sky-500 hover:text-white"}`}>{code}</button>; })}</div>}</div>{highlight && <p className="mt-3 text-xs text-slate-400">{highlight.valueRows} de {highlight.totalRows} equipes com resultado</p>}<div className="mt-4 space-y-2">{shown.map(row => <div key={`${row.ine}-${row.position}`} className="flex items-center gap-3 rounded-xl border border-sky-900/70 bg-[#081d31] px-3 py-2.5"><span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sky-500/15 text-sm font-bold text-sky-100">{row.position}º</span><div className="min-w-0 flex-1">
+  <p className="truncate text-sm font-semibold text-white">{formatUnitName(row.name)}</p>
+  <div className="mt-1 flex items-center gap-1 text-xs font-semibold">
+      {row.movement == null ? (
+        <span className="text-slate-400">—</span>
+      ) : row.movement > 0 ? (
+        <span className="flex items-center text-emerald-400">
+          <ArrowUpRight className="h-3.5 w-3.5" /> +{row.movement} posições
+        </span>
+      ) : row.movement < 0 ? (
+        <span className="flex items-center text-rose-400">
+          <ArrowDownRight className="h-3.5 w-3.5" /> {row.movement} posições
+        </span>
+      ) : (
+        <span className="flex items-center text-slate-400">
+          <Minus className="h-3.5 w-3.5" /> 0 posições
+        </span>
+      )}
+    </div>
+</div>
+<div className="shrink-0">
+  <ClassificationBadge
+    text={row.classification || (oralPanelId ? classifyOralValue(oralPanelId, row.value) : "") || ""}
+  />
+</div>
+<b className="shrink-0 text-sm text-white">{row.value.toFixed(2)}</b></div>)}{!shown.length && <p className="rounded-xl border border-sky-900/70 bg-[#051426] p-4 text-sm text-slate-400">{emptyText}</p>}</div><Link href={href} className="mt-4 inline-flex items-center gap-1 text-xs font-semibold text-sky-300 hover:text-white">Ver análise completa <ExternalLink className="h-3 w-3"/></Link></div>;
 }

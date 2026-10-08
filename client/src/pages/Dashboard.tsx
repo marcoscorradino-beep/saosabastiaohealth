@@ -1,3 +1,10 @@
+import { apsScoreBands } from "../../../shared/apsMethodology";
+import {
+  buildRankingPositions,
+  rankingMovement,
+  resultVariation,
+  teamKey,
+} from "@/lib/rankingEvolution";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useRoute } from "wouter";
 import DataTable from "@/components/DataTable";
@@ -5,7 +12,7 @@ import RankingView from "@/components/RankingView";
 import CompetenceEvolutionChart from "@/components/CompetenceEvolutionChart";
 import { buildCompetenceEvolution } from "@/lib/competenceEvolution";
 import { formatUnitName } from "@/lib/unitName";
-import { classificationKey } from "@/components/ClassificationBadge";
+import ClassificationBadge, { classificationKey } from "@/components/ClassificationBadge";
 import { allPanels } from "@/lib/mockData";
 import { siapsData, SiapsPanelId } from "@/lib/siapsData";
 import { BarChart3, ChevronDown, Download, Info, LayoutDashboard, Search } from "lucide-react";
@@ -33,7 +40,46 @@ export default function Dashboard() {
   useEffect(() => { if (comps.length && !comps.includes(competence)) setCompetence(comps[0]); }, [panelId, remote]);
   const [team, setTeam] = useState("all");
   const [view, setView] = useState<"table" | "ranking">("table");
+  const [sortOrder, setSortOrder] = useState<"alphabetical" | "highest" | "lowest">("alphabetical");
   const rows = (combined[competence] || []) as readonly any[];
+  const previousCompetenceIndex = comps.indexOf(competence) + 1;
+  const previousCompetence =
+    previousCompetenceIndex < comps.length
+      ? comps[previousCompetenceIndex]
+      : undefined;
+
+  const previousRows = (
+    previousCompetence ? combined[previousCompetence] || [] : []
+  ) as readonly any[];
+
+  const previousByTeam = new Map(
+    previousRows.map(row => [teamKey(row), row]),
+  );
+
+  const currentPositions = buildRankingPositions(rows);
+  const previousPositions = buildRankingPositions(previousRows);
+
+  const evolutionByTeam = new Map(
+    rows.map(row => {
+      const key = teamKey(row);
+      const previous = previousByTeam.get(key);
+
+      return [
+        key,
+        {
+          variation: resultVariation(
+            row.value,
+            previous?.value ?? null,
+          ),
+          movement: rankingMovement(
+            currentPositions.get(key),
+            previousPositions.get(key),
+          ),
+        },
+      ] as const;
+    }),
+  );
+
   const teamOptions = useMemo(
     () =>
       Array.from(new Map(rows.map((row: any) => [row.ine, row])).values())
@@ -59,6 +105,24 @@ export default function Dashboard() {
     const needle = query.trim().toLocaleLowerCase("pt-BR");
     return rows.filter((row) => (team === "all" || row.ine === team) && (!needle || `${row.name} ${row.establishment} ${row.ine} ${row.cnes}`.toLocaleLowerCase("pt-BR").includes(needle)));
   }, [rows, team, query]);
+  const sortedFiltered = useMemo(() => {
+    return [...filtered].sort((a, b) => {
+      const aValue = typeof a.value === "number" && Number.isFinite(a.value) ? a.value : null;
+      const bValue = typeof b.value === "number" && Number.isFinite(b.value) ? b.value : null;
+
+      if (sortOrder !== "alphabetical") {
+        if (aValue === null && bValue !== null) return 1;
+        if (bValue === null && aValue !== null) return -1;
+        if (aValue !== null && bValue !== null && aValue !== bValue) {
+          return sortOrder === "highest" ? bValue - aValue : aValue - bValue;
+        }
+      }
+
+      return formatUnitName(a.name).localeCompare(formatUnitName(b.name), "pt-BR") ||
+        String(a.ine).localeCompare(String(b.ine));
+    });
+  }, [filtered, sortOrder]);
+
   const vals = rows.map((row) => row.value).filter((value): value is number => typeof value === "number");
   const avg = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
   const classes = rows.reduce((acc: Record<string, number>, row) => { const key = classificationKey(row.classification); if (key) acc[key] = (acc[key] || 0) + 1; return acc; }, {});
@@ -84,19 +148,61 @@ export default function Dashboard() {
           <p className="mt-2 text-xs leading-relaxed text-slate-400">{item.description}</p>
         </Link>)}
       </nav>
+      <section className="mb-7 rounded-2xl border border-sky-800/70 bg-[#071c30] p-5">
+        <h2 className="text-xl font-bold text-white">Pontuação</h2>
+        <p className="mt-1 text-sm text-slate-300">
+          Faixas de classificação e distribuição das equipes.
+        </p>
+        <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+          {apsScoreBands[panelId].map((band) => {
+            const count = classes[band.label] || 0;
+            const pct = rows.length ? (count / rows.length) * 100 : 0;
+
+            return (
+              <div key={band.label} className="flex min-w-0 items-center justify-between gap-2 rounded-xl border border-sky-800/70 bg-[#0b2943] p-3">
+                <div className="min-w-0 flex-1">
+                  <ClassificationBadge text={band.label} />
+                  <p className="mt-2 text-xs leading-snug text-sky-200">{band.rule}</p>
+                </div>
+                <div className="flex min-h-12 min-w-12 shrink-0 flex-col items-center justify-center rounded-lg border border-sky-700 bg-[#173c57] px-2 py-1">
+                  <span className="text-lg font-black leading-tight text-white">{count}</span>
+                  <span className="text-[11px] font-semibold text-sky-200">{pct.toFixed(1)}%</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
       <section className="no-print mb-7 rounded-2xl border border-sky-800/70 bg-[#071c30] p-5 shadow-lg shadow-slate-950/20"><div className="grid grid-cols-1 items-end gap-4 md:grid-cols-2 lg:grid-cols-[1fr_1fr_1.3fr_auto]">
         <Select label="Competência" value={competence} onChange={(value) => { setCompetence(value); setTeam("all"); }} options={comps.map((item) => [item, item])} />
         <Select label="Equipe" value={team} onChange={setTeam} options={[["all", "Todas as equipes"], ...teamOptions]} />
         <label className="block text-sm font-semibold text-slate-200">Buscar equipe, estabelecimento ou INE<div className="relative mt-2"><Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-sky-300" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Digite para filtrar..." className="w-full rounded-lg border border-sky-800 bg-[#03111f] py-2.5 pl-9 pr-3 text-slate-100 placeholder:text-slate-500 outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20" /></div></label>
-        <div className="flex gap-2"><button onClick={() => setView("table")} className={`rounded-lg px-4 py-2.5 font-semibold ${view === "table" ? "bg-sky-600 text-white" : "border border-sky-700 bg-[#0b2943] text-sky-100"}`}>Equipes</button><button onClick={() => setView("ranking")} className={`rounded-lg px-4 py-2.5 font-semibold ${view === "ranking" ? "bg-sky-600 text-white" : "border border-sky-700 bg-[#0b2943] text-sky-100"}`}>Ranking</button></div>
+        <div className="flex flex-col gap-2">
+
+          <div className="flex gap-2"><button onClick={() => setView("table")} className={`rounded-lg px-4 py-2.5 font-semibold ${view === "table" ? "bg-sky-600 text-white" : "border border-sky-700 bg-[#0b2943] text-sky-100"}`}>Equipes</button><button onClick={() => setView("ranking")} className={`rounded-lg px-4 py-2.5 font-semibold ${view === "ranking" ? "bg-sky-600 text-white" : "border border-sky-700 bg-[#0b2943] text-sky-100"}`}>Ranking</button></div></div>
       </div></section>
       <CompetenceEvolutionChart
         points={evolutionPoints}
         teamName={selectedTeamName}
       />
-      <section className="mb-8 grid grid-cols-2 gap-3 md:grid-cols-4">{classCards.map(([label, tone]) => { const count = classes[label] || 0; const pct = rows.length ? (count / rows.length) * 100 : 0; return <div key={label} className={`rounded-xl border p-4 ${tone}`}><p className="text-xs font-bold uppercase tracking-wider">{label}</p><div className="mt-1 flex items-end justify-between gap-2"><p className="text-2xl font-black text-white">{count}</p><p className="text-sm font-semibold">{pct.toFixed(1)}%</p></div><div className="mt-3 h-1.5 rounded-full bg-slate-950/30"><div className="h-1.5 rounded-full bg-current opacity-80" style={{ width: `${pct}%` }} /></div></div>; })}</section>
-      {practices.length > 0 && <section className="mb-7"><div className="mb-3 flex items-center gap-2"><BarChart3 className="h-5 w-5 text-cyan-300" /><h2 className="text-lg font-bold text-white">Boas práticas registradas</h2></div><div className="grid grid-cols-1 gap-3 md:grid-cols-2">{practices.map((practice: any, index: number) => <div key={index} className="rounded-xl border border-sky-800/70 bg-[#071c30] p-4"><p className="text-sm font-medium text-slate-100">{practice.label}</p><p className="mt-2 text-xs text-slate-300">Média de registros por equipe: <b className="text-white">{practice.avg.toFixed(1)}</b></p></div>)}</div></section>}
-      <section><div className="mb-4 flex flex-col justify-between gap-2 sm:flex-row sm:items-end"><div><h2 className="text-xl font-bold text-white">Resultados por equipe</h2><p className="mt-1 text-sm text-slate-300">{filtered.length} de {rows.length} equipe(s) exibida(s) • valores conforme o arquivo SIAPS.</p></div><span className="text-xs font-semibold uppercase tracking-wider text-sky-300">{view === "table" ? "Visão em tabela" : "Visão em ranking"}</span></div>{view === "table" ? <DataTable rows={filtered} /> : <RankingView rows={filtered} />}</section>
+
+
+      <section className="mt-5 overflow-hidden rounded-2xl border border-sky-800/70 bg-[#071c30] shadow-lg shadow-slate-950/20"><div className="border-b border-sky-800/70 p-5"><div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-end"><div><h2 className="text-xl font-bold text-white">Resultados por equipe</h2><p className="mt-1 text-sm text-slate-300">{filtered.length} de {rows.length} equipe(s) exibida(s) • valores conforme o arquivo SIAPS.</p></div>{view === "table" && (          <label className="text-xs font-semibold text-slate-200">
+            Ordenar equipes
+            <select
+              value={sortOrder}
+              onChange={(event) => setSortOrder(event.target.value as typeof sortOrder)}
+              className="mt-2 w-full rounded-lg border border-sky-800 bg-[#03111f] px-3 py-2.5 text-slate-100"
+            >
+              <option value="alphabetical">Ordem alfabética (A–Z)</option>
+              <option value="highest">Maior resultado primeiro</option>
+              <option value="lowest">Menor resultado primeiro</option>
+            </select>
+          </label>)}</div></div><div className="overflow-x-auto">{view === "table" ? <DataTable
+  rows={sortedFiltered}
+  evolutionByTeam={evolutionByTeam}
+  previousCompetence={previousCompetence}
+/> : <RankingView rows={filtered} />}</div></section>
       <div className="mt-7 flex gap-2 text-xs text-slate-300 no-print"><Info className="h-4 w-4 shrink-0 text-sky-300" /><p>Fonte: arquivos CSV exportados do SIAPS. Os arquivos recebidos estão identificados como “Dado Preliminar”. A média municipal exibida nesta versão é a média simples dos resultados das equipes na competência selecionada.</p></div>
     </main>
   </div>;

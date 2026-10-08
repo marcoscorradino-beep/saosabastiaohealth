@@ -21,3 +21,49 @@ export function classifyApsValue(panelId: string, value: number | null | undefin
   if (value <= 100) return "ÓTIMO";
   return "";
 }
+
+/** Faixas implementadas; validação com notas metodológicas pendente. */
+export const apsScoreBands: Record<ApsPanelId, { label: string; rule: string }[]> = {
+  acesso: [
+    { label: "REGULAR", rule: "Até 10% ou acima de 70%" },
+    { label: "SUFICIENTE", rule: "Acima de 10% até 30%" },
+    { label: "BOM", rule: "Acima de 30% até 50%" },
+    { label: "ÓTIMO", rule: "Acima de 50% até 70%" },
+  ],
+  infantil: [
+    { label: "REGULAR", rule: "Até 25%" },
+    { label: "SUFICIENTE", rule: "Acima de 25% até 50%" },
+    { label: "BOM", rule: "Acima de 50% até 75%" },
+    { label: "ÓTIMO", rule: "Acima de 75% até 100%" },
+  ],
+  gestante: [
+    { label: "REGULAR", rule: "Até 25%" },
+    { label: "SUFICIENTE", rule: "Acima de 25% até 50%" },
+    { label: "BOM", rule: "Acima de 50% até 75%" },
+    { label: "ÓTIMO", rule: "Acima de 75% até 100%" },
+  ],
+  diabetes: [
+    { label: "REGULAR", rule: "Até 25%" },
+    { label: "SUFICIENTE", rule: "Acima de 25% até 50%" },
+    { label: "BOM", rule: "Acima de 50% até 75%" },
+    { label: "ÓTIMO", rule: "Acima de 75% até 100%" },
+  ],
+  hipertensao: [
+    { label: "REGULAR", rule: "Até 25%" },
+    { label: "SUFICIENTE", rule: "Acima de 25% até 50%" },
+    { label: "BOM", rule: "Acima de 50% até 75%" },
+    { label: "ÓTIMO", rule: "Acima de 75% até 100%" },
+  ],
+  idosa: [
+    { label: "REGULAR", rule: "Até 25%" },
+    { label: "SUFICIENTE", rule: "Acima de 25% até 50%" },
+    { label: "BOM", rule: "Acima de 50% até 75%" },
+    { label: "ÓTIMO", rule: "Acima de 75% até 100%" },
+  ],
+  cancer: [
+    { label: "REGULAR", rule: "Até 25%" },
+    { label: "SUFICIENTE", rule: "Acima de 25% até 50%" },
+    { label: "BOM", rule: "Acima de 50% até 75%" },
+    { label: "ÓTIMO", rule: "Acima de 75% até 100%" },
+  ],
+};

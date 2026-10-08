@@ -16,6 +16,7 @@ export type Highlight = {
   ine: string;
   value: number;
   classification: string;
+  movement?: number | null;
 };
 
 export type PanelHighlight = {
@@ -55,12 +56,53 @@ function rankMonthlyRows(rows: StoredRow[], panelId: string, competence: string)
     previousKey = key;
     previousPosition = position;
   });
-  const cutoff = rowsWithPositions.find(row => row.position > 3)?.position ?? Infinity;
-  return { panelId, competence, totalRows: rows.length, valueRows: eligible.length, rows: rowsWithPositions.filter(row => row.position <= 3) };
+  return { panelId, competence, totalRows: rows.length, valueRows: eligible.length, rows: rowsWithPositions.filter(row => row.position <= 5) };
 }
 
 export function buildMonthlyHighlight(datasets: StoredStore["datasets"], panelId: string, competence: string): PanelHighlight {
-  return rankMonthlyRows(datasets[panelId]?.[competence] || [], panelId, competence);
+  const current = rankMonthlyRows(datasets[panelId]?.[competence] || [], panelId, competence);
+  const previousCompetence = Object.keys(datasets[panelId] || {})
+    .filter(item => isMonthlyCompetence(item) && compareMonthlyCompetences(item, competence) < 0)
+    .sort(compareMonthlyCompetences)
+    .at(-1);
+
+  if (!previousCompetence) {
+    return { ...current, rows: current.rows.map(row => ({ ...row, movement: null })) };
+  }
+
+  // Recalcula todas as posições anteriores, não apenas os cinco destaques.
+  const previousRows = datasets[panelId]?.[previousCompetence] || [];
+  const eligible = previousRows.filter(
+    (row): row is StoredRow & { value: number } =>
+      typeof row.value === "number" && Number.isFinite(row.value),
+  );
+  const sorted = [...eligible].sort((a, b) => {
+    const classDelta = (CLASSIFICATION_RANK[b.classification] || 0) -
+      (CLASSIFICATION_RANK[a.classification] || 0);
+    return classDelta || b.value - a.value || a.ine.localeCompare(b.ine);
+  });
+
+  const previousPositions = new Map<string, number>();
+  let lastKey = "";
+  let lastPosition = 0;
+
+  sorted.forEach((row, index) => {
+    const key = `${row.classification}|${row.value}`;
+    const position = key === lastKey ? lastPosition : index + 1;
+    previousPositions.set(row.ine, position);
+    lastKey = key;
+    lastPosition = position;
+  });
+
+  return {
+    ...current,
+    rows: current.rows.map(row => ({
+      ...row,
+      movement: previousPositions.has(row.ine)
+        ? previousPositions.get(row.ine)! - row.position
+        : null,
+    })),
+  };
 }
 
 export function latestQuadrimestre(datasets: StoredStore["datasets"], panelId: string) {
@@ -78,46 +120,88 @@ export function buildQuadrimestreHighlight(
   teamType?: string,
 ) {
   const competence = latestQuadrimestre(datasets, panelId);
-  const allRows = competence ? datasets[panelId]?.[competence] || [] : [];
-  const filteredRows = teamType ? allRows.filter(row => row.teamType === teamType) : allRows;
 
-  const uniqueRows = Array.from(
-    new Map(
-      filteredRows.map(row => [`${row.teamType}|${row.ine}`, row] as const),
-    ).values(),
-  );
+  const rankPeriod = (period: string | null) => {
+    const allRows = period ? datasets[panelId]?.[period] || [] : [];
+    const filteredRows = teamType
+      ? allRows.filter(row => row.teamType === teamType)
+      : allRows;
 
-  const eligible = uniqueRows.filter(
-    row => typeof row.finalValue === "number" && Number.isFinite(row.finalValue),
-  );
+    const uniqueRows = Array.from(
+      new Map(
+        filteredRows.map(row => [`${row.teamType}|${row.ine}`, row] as const),
+      ).values(),
+    );
 
-  const sorted = [...eligible].sort(
-    (a, b) => (b.finalValue! - a.finalValue!) || a.ine.localeCompare(b.ine),
-  );
+    const eligible = uniqueRows.filter(
+      (row): row is StoredRow & { finalValue: number } =>
+        typeof row.finalValue === "number" && Number.isFinite(row.finalValue),
+    );
 
-  const output: Highlight[] = [];
-  let previousValue: number | null = null;
-  let previousPosition = 0;
+    const sorted = [...eligible].sort(
+      (a, b) => b.finalValue - a.finalValue || a.ine.localeCompare(b.ine),
+    );
 
-  sorted.forEach((row, index) => {
-    const position = row.finalValue === previousValue ? previousPosition : index + 1;
-    output.push({
-      position,
-      name: row.name,
-      ine: row.ine,
-      value: row.finalValue!,
-      classification: row.finalClassification || row.classification,
+    const output: Highlight[] = [];
+    let previousValue: number | null = null;
+    let previousPosition = 0;
+
+    sorted.forEach((row, index) => {
+      const position = row.finalValue === previousValue
+        ? previousPosition
+        : index + 1;
+
+      output.push({
+        position,
+        name: row.name,
+        ine: row.ine,
+        value: row.finalValue,
+        classification: row.finalClassification || row.classification,
+      });
+
+      previousValue = row.finalValue;
+      previousPosition = position;
     });
-    previousValue = row.finalValue!;
-    previousPosition = position;
-  });
+
+    return { totalRows: uniqueRows.length, valueRows: eligible.length, output };
+  };
+
+  const current = rankPeriod(competence);
+
+  const previousCompetence = Object.keys(datasets[panelId] || {})
+    .filter(period =>
+      /^Q[1-3]\/\d{2}$/.test(period) &&
+      period !== competence &&
+      period === latestQuadrimestre({
+        [panelId]: Object.fromEntries(
+          Object.entries(datasets[panelId] || {}).filter(([key]) =>
+            /^Q[1-3]\/\d{2}$/.test(key) &&
+            (Number(key.slice(3)) * 3 + Number(key[1])) <
+            (Number((competence || "").slice(3)) * 3 + Number((competence || "")[1]))
+          ),
+        ),
+      } as StoredStore["datasets"], panelId)
+    )
+    .at(0) || null;
+
+  const previous = previousCompetence ? rankPeriod(previousCompetence) : null;
+  const previousPositions = new Map(
+    (previous?.output || []).map(row => [row.ine, row.position]),
+  );
 
   return {
     panelId,
     competence,
-    totalRows: uniqueRows.length,
-    valueRows: eligible.length,
-    rows: output.filter(row => row.position <= 3),
+    totalRows: current.totalRows,
+    valueRows: current.valueRows,
+    rows: current.output
+      .filter(row => row.position <= 5)
+      .map(row => ({
+        ...row,
+        movement: previousPositions.has(row.ine)
+          ? previousPositions.get(row.ine)! - row.position
+          : null,
+      })),
   };
 }
 

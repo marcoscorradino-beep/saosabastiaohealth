@@ -10,6 +10,8 @@ import CompetenceEvolutionChart from "@/components/CompetenceEvolutionChart";
 import { buildCompetenceEvolution } from "@/lib/competenceEvolution";
 import { buildQuadrimestralEvolution } from "@/lib/quadrimestralEvolution";
 import { formatUnitName } from "@/lib/unitName";
+import EvolutionIndicator from "@/components/EvolutionIndicator";
+import { resultVariation, teamKey } from "@/lib/rankingEvolution";
 
 type Metric = { label: string; value: number | null; text?: string };
 type Row = { ine: string; cnes: string; establishment: string; name: string; teamType: string; value: number | null; classification: string; practices?: { label: string; value: number | null }[]; metrics?: Metric[]; dimension?: string; indicator?: string; finalValue?: number | null; finalClassification?: string };
@@ -24,12 +26,36 @@ const fmt = (value: number | null | undefined) => value == null ? "—" : new In
 export default function PublicDataset() {
   const [location] = useLocation(); const id = location.split("/").filter(Boolean).pop() || "b1"; const def = defs[id];
   const [data, setData] = useState<Record<string, Row[]>>({}); const [period, setPeriod] = useState(""); const [query, setQuery] = useState(""); const [team, setTeam] = useState("all"); const [teamType, setTeamType] = useState("eSF");
+  const [sortOrder, setSortOrder] = useState<"alphabetical" | "highest" | "lowest">("alphabetical");
   useEffect(() => { if (!def) return; fetch(`/api/data/${id}`).then((response) => response.ok ? response.json() : {}).then((json) => setData(json || {})).catch(() => setData({})); }, [id]);
   useEffect(() => { setTeam("all"); setTeamType(id === "quadrimestral-qualidade" ? "eSF" : "all"); setQuery(""); }, [id]);
   const periods = useMemo(() => Object.keys(data).sort(periodSort), [data]); useEffect(() => { if (periods.length && !periods.includes(period)) setPeriod(periods[periods.length - 1]); }, [periods, id]);
   const allRows = data[period] || [];
   const availableTeamTypes = Array.from(new Set(allRows.map((row) => row.teamType).filter(Boolean))).sort();
   const rows = id === "quadrimestral-qualidade" ? allRows.filter((row) => row.teamType === teamType) : allRows;
+  const previousPeriodIndex = periods.indexOf(period) - 1;
+  const previousPeriod =
+    previousPeriodIndex >= 0 ? periods[previousPeriodIndex] : undefined;
+
+  const previousRows =
+    def?.kind === "oral" && previousPeriod
+      ? data[previousPeriod] || []
+      : [];
+
+  const previousByTeam = new Map(
+    previousRows.map((row) => [teamKey(row), row]),
+  );
+
+  const oralVariationByTeam = new Map(
+    rows.map((row) => {
+      const previous = previousByTeam.get(teamKey(row));
+      return [
+        teamKey(row),
+        resultVariation(row.value, previous?.value ?? null),
+      ] as const;
+    }),
+  );
+
   const teams = useMemo(() => Array.from(new Map(rows.map((row) => [row.ine, row])).values()).sort((a, b) => formatUnitName(a.name).localeCompare(formatUnitName(b.name), "pt-BR")), [rows]);
   const evolutionPoints = useMemo(
     () =>
@@ -47,6 +73,26 @@ export default function PublicDataset() {
     if (!needle) return true;
     return rows.some((candidate) => candidate.ine === row.ine && `${candidate.name} ${candidate.establishment} ${candidate.ine} ${candidate.cnes} ${candidate.dimension || ""} ${candidate.indicator || ""}`.toLocaleLowerCase("pt-BR").includes(needle));
   });
+  const sortedFiltered = useMemo(() => {
+    if (def?.kind !== "oral") return filtered;
+
+    return [...filtered].sort((a, b) => {
+      const aValue = typeof a.value === "number" && Number.isFinite(a.value) ? a.value : null;
+      const bValue = typeof b.value === "number" && Number.isFinite(b.value) ? b.value : null;
+
+      if (sortOrder !== "alphabetical") {
+        if (aValue === null && bValue !== null) return 1;
+        if (bValue === null && aValue !== null) return -1;
+        if (aValue !== null && bValue !== null && aValue !== bValue) {
+          return sortOrder === "highest" ? bValue - aValue : aValue - bValue;
+        }
+      }
+
+      return formatUnitName(a.name).localeCompare(formatUnitName(b.name), "pt-BR") ||
+        a.ine.localeCompare(b.ine);
+    });
+  }, [filtered, sortOrder, def?.kind]);
+
   const isQuadrimestral = def?.kind === "quadrimestral";
   const groupedRows = groupQuadrimestralRows(filtered);
   const uniqueTeamRows = Array.from(new Map(rows.map((row) => [row.ine, row])).values());
@@ -95,9 +141,60 @@ export default function PublicDataset() {
       </Link>)}{def.kind === "territorial" && <><Link href="/dados/territorial" className={`rounded-lg border px-3 py-2 text-sm font-semibold ${id === "territorial" ? "border-violet-400 bg-violet-950/40 text-violet-200" : "border-sky-800 text-slate-300"}`}>Visão geral</Link><Link href="/dados/territorial-detalhe" className={`rounded-lg border px-3 py-2 text-sm font-semibold ${id === "territorial-detalhe" ? "border-violet-400 bg-violet-950/40 text-violet-200" : "border-sky-800 text-slate-300"}`}>Detalhado</Link></>}{def.kind === "quadrimestral" && <><Link href="/dados/quadrimestral-qualidade" className={`rounded-lg border px-3 py-2 text-sm font-semibold ${id === "quadrimestral-qualidade" ? "border-orange-400 bg-orange-950/40 text-orange-200" : "border-sky-800 text-slate-300"}`}>Componente Qualidade</Link><Link href="/dados/quadrimestral-cvat" className={`rounded-lg border px-3 py-2 text-sm font-semibold ${id === "quadrimestral-cvat" ? "border-orange-400 bg-orange-950/40 text-orange-200" : "border-sky-800 text-slate-300"}`}>Vínculo e Territorial</Link></>}</nav>
       {periods.length === 0 ? <section className="mt-8 rounded-2xl border border-sky-800/70 bg-[#071c30] p-8"><Info className="h-8 w-8 text-sky-300" /><h2 className="mt-4 text-xl font-bold text-white">Nenhum dado publicado neste módulo</h2><p className="mt-2 text-slate-300">A estrutura pública está pronta. Quando um administrador importar o CSV correspondente, as competências ou quadrimestres aparecerão aqui automaticamente.</p></section> : <>
         <section className="mt-8 grid gap-4 sm:grid-cols-3"><Card label={def.kind === "quadrimestral" ? "Quadrimestre" : "Competência"} value={period} /><Card label="Equipes" value={String(uniqueTeams)} /><Card label={def.kind === "quadrimestral" ? "Média das notas finais" : "Média dos resultados"} value={fmt(avg)} /></section>
-        {def.kind !== "territorial" && <section className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">{classCards.map(([label, tone]) => { const count = classes[label] || 0; const pctBase = def.kind === "quadrimestral" ? uniqueTeams : rows.length; const pct = pctBase ? count / pctBase * 100 : 0; return <div key={label} className={`rounded-xl border p-4 ${tone}`}><p className="text-xs font-bold uppercase tracking-wider">{label}</p><div className="mt-1 flex items-end justify-between"><p className="text-2xl font-black text-white">{count}</p><p className="text-sm font-semibold">{pct.toFixed(1)}%</p></div><div className="mt-3 h-1.5 rounded-full bg-slate-950/30"><div className="h-1.5 rounded-full bg-current opacity-80" style={{ width: `${pct}%` }} /></div></div>; })}</section>}
-        {scoreBands.length > 0 && <section className="mt-5 rounded-2xl border border-sky-800/70 bg-[#071c30] p-5"><div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-end"><div><h2 className="text-xl font-bold text-white">Pontuação</h2><p className="mt-1 text-sm text-slate-300">Faixas metodológicas específicas deste indicador.</p></div><span className="text-xs text-slate-400">Classificação calculada conforme Nota Metodológica oficial do indicador.</span></div><div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{scoreBands.map((band) => <div key={band.label} className="rounded-xl border border-sky-800/70 bg-[#0b2943] p-4"><p className="text-sm font-bold text-white">{band.label}</p><p className="mt-1 text-sm text-sky-200">{band.rule}</p></div>)}</div></section>}
+        {def.kind === "oral" && scoreBands.length > 0 && (
+          <section className="mt-5 rounded-2xl border border-sky-800/70 bg-[#071c30] p-5">
+            <h2 className="text-xl font-bold text-white">Pontuação</h2>
+            <p className="mt-1 text-sm text-slate-300">
+              Faixas de classificação e distribuição das equipes.
+            </p>
+            <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+              {[...scoreBands]
+                .sort((a, b) =>
+                  ["REGULAR", "SUFICIENTE", "BOM", "ÓTIMO"].indexOf(a.label) -
+                  ["REGULAR", "SUFICIENTE", "BOM", "ÓTIMO"].indexOf(b.label)
+                )
+                .map((band) => {
+                const count = classes[band.label] || 0;
+                const pct = rows.length ? (count / rows.length) * 100 : 0;
+
+                return (
+                  <div key={band.label} className="flex min-w-0 items-center justify-between gap-2 rounded-xl border border-sky-800/70 bg-[#0b2943] p-3">
+                    <div className="min-w-0 flex-1">
+                      <ClassificationBadge text={band.label} />
+                      <p className="mt-2 text-xs leading-snug text-sky-200">{band.rule}</p>
+                    </div>
+                    <div className="flex min-h-12 min-w-12 shrink-0 flex-col items-center justify-center rounded-lg border border-sky-700 bg-[#173c57] px-2 py-1">
+                      <span className="text-lg font-black leading-tight text-white">{count}</span>
+                      <span className="text-[11px] font-semibold text-sky-200">{pct.toFixed(1)}%</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
+        {def.kind === "quadrimestral" && (
+          <section className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
+            {classCards.map(([label, tone]) => {
+              const count = classes[label] || 0;
+              const pct = uniqueTeams ? (count / uniqueTeams) * 100 : 0;
+              return (
+                <div key={label} className={`rounded-xl border p-4 ${tone}`}>
+                  <p className="text-xs font-bold uppercase tracking-wider">{label}</p>
+                  <div className="mt-1 flex items-end justify-between">
+                    <p className="text-2xl font-black text-white">{count}</p>
+                    <p className="text-sm font-semibold">{pct.toFixed(1)}%</p>
+                  </div>
+                  <div className="mt-3 h-1.5 rounded-full bg-slate-950/30">
+                    <div className="h-1.5 rounded-full bg-current opacity-80" style={{ width: `${pct}%` }} />
+                  </div>
+                </div>
+              );
+            })}
+          </section>
+        )}
         {id === "quadrimestral-qualidade" && availableTeamTypes.length > 1 && <section className="no-print mt-5"><p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-300">Tipo de equipe</p><div className="flex flex-wrap gap-2">{[["eSF", "Atenção Básica"], ["eSB", "Odonto"]].filter(([value]) => availableTeamTypes.includes(value)).map(([value, label]) => <button key={value} type="button" onClick={() => { setTeamType(value); setTeam("all"); }} className={`rounded-lg border px-4 py-2.5 text-sm font-semibold transition-colors ${teamType === value ? "border-cyan-400 bg-cyan-950/50 text-cyan-100" : "border-sky-800 bg-[#071c30] text-slate-300 hover:border-sky-500 hover:text-white"}`}>{label}</button>)}</div></section>}<section className="no-print mt-5 grid gap-3 rounded-2xl border border-sky-800/70 bg-[#071c30] p-4 md:grid-cols-3"><label className="text-xs font-semibold text-slate-200">Período<select value={period} onChange={(event) => { setPeriod(event.target.value); setTeam("all"); }} className="mt-2 w-full rounded-lg border border-sky-800 bg-[#03111f] px-3 py-2.5 text-slate-100 outline-none focus:border-cyan-400">{periods.map((item) => <option key={item}>{item}</option>)}</select></label><label className="text-xs font-semibold text-slate-200">Equipe<select value={team} onChange={(event) => setTeam(event.target.value)} className="mt-2 w-full rounded-lg border border-sky-800 bg-[#03111f] px-3 py-2.5 text-slate-100 outline-none focus:border-cyan-400"><option value="all">Todas as equipes</option>{teams.map((item) => <option value={item.ine} key={item.ine}>{formatUnitName(item.name)}</option>)}</select></label><label className="text-xs font-semibold text-slate-200">Buscar equipe, estabelecimento ou INE<div className="relative mt-2"><Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-sky-300" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Digite para filtrar..." className="w-full rounded-lg border border-sky-800 bg-[#03111f] py-2.5 pl-9 pr-3 text-slate-100 placeholder:text-slate-500 outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20" /></div></label></section>
+        
         {(def.kind === "oral" || id === "territorial" || def.kind === "quadrimestral") && (
           <CompetenceEvolutionChart
             points={evolutionPoints}
@@ -119,7 +216,32 @@ export default function PublicDataset() {
             </div>
             <div className="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">{row.indicators.map((indicator) => <div key={indicator.key} className="rounded-xl border border-sky-800/70 bg-[#0b2943] px-4 py-3"><p className="text-xs font-semibold leading-5 text-sky-200">{indicator.label}</p><p className="mt-1 text-lg font-black text-white">{fmt(indicator.value)}</p></div>)}</div>
           </article>)}
-        </section> :         <section className="mt-5 overflow-hidden rounded-2xl border border-sky-800/70 bg-[#071c30] shadow-xl shadow-slate-950/20"><div className="border-b border-sky-800/70 p-5"><div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-end"><div><h2 className="text-xl font-bold text-white">Resultados por equipe</h2><p className="mt-1 text-sm text-slate-300">{filtered.length} de {rows.length} registro(s) exibido(s) • INE e CNES preservados do arquivo de origem.</p></div><span className="text-xs font-bold uppercase tracking-wider text-sky-300">Consulta pública</span></div></div><div className="overflow-x-auto"><table className="w-full text-sm"><caption className="sr-only">Resultados por equipe</caption><thead className="bg-[#0b2943] text-xs uppercase tracking-wider text-sky-100"><tr><th scope="col" className="p-4 text-left">Equipe</th><th scope="col" className="p-4 text-left">INE</th>{def.kind === "quadrimestral" && <th scope="col" className="p-4 text-left">Dimensão / Indicador</th>}<th scope="col" className="p-4 text-right">Resultado</th>{def.kind === "quadrimestral" && <th scope="col" className="p-4 text-right">Nota final</th>}<th scope="col" className="p-4 text-left">Classificação</th></tr></thead><tbody>{filtered.map((row, index) => <tr key={`${row.ine}-${row.dimension}-${row.indicator}-${index}`} className={`border-t border-sky-900/70 align-top ${index % 2 ? "bg-[#061a2c]" : "bg-[#08223a]"} hover:bg-sky-900/30`}><td className="p-4"><b className="text-white">{formatUnitName(row.name)}</b><div className="mt-1 text-xs text-slate-300">{row.establishment} • CNES {row.cnes}</div>{row.metrics?.length ? <div className="mt-2 flex flex-wrap gap-1.5">{row.metrics.filter((metric) => !(def.kind === "territorial" && metric.label === "Pessoas vinculadas")).map((metric, metricIndex) => <span key={metricIndex} className="rounded-md border border-sky-800/70 bg-[#0b2943] px-2 py-1 text-xs text-sky-100">{metric.label}: <b>{metric.text || fmt(metric.value)}</b></span>)}</div> : null}</td><td className="p-4 font-mono text-xs text-sky-200">{row.ine}</td>{def.kind === "quadrimestral" && <td className="p-4 text-slate-100"><div>{row.dimension || "—"}</div>{row.indicator && <div className="mt-1 text-xs text-slate-300">{row.indicator}</div>}</td>}<td className="p-4 text-right text-base font-bold text-white">{fmt(row.value)}{def.kind === "territorial" && exceedsPopulationParameter(row) && <span className="ml-2 inline-flex cursor-help items-center rounded-full border border-amber-300/50 bg-amber-400/10 px-2 py-0.5 text-xs font-black text-amber-200" title="Limite populacional excedido. A equipe ultrapassou o parâmetro populacional e atingiu a pontuação máxima de 10. O alerta indica a incidência do teto previsto para essa condição. A pontuação exibida é a informada pelo SIAPS, sem recálculo.">!</span>}</td>{def.kind === "quadrimestral" && <td className="p-4 text-right text-base font-bold text-white">{fmt(row.finalValue)}</td>}<td className="p-4"><ClassificationBadge text={effectiveClassification(row) || (id === "territorial" ? "Monitoramento mensal" : undefined)} /></td></tr>)}</tbody></table></div>{def.kind === "territorial" && filtered.some(exceedsPopulationParameter) && <p className="mt-3 text-xs text-amber-300"><b>!</b> indica equipe que ultrapassou o Parâmetro Populacional e atingiu a pontuação máxima de 10. A pontuação exibida permanece sendo o valor original informado pelo SIAPS, sem recálculo.</p>}</section>}
+        </section> :         <section className="mt-5 overflow-hidden rounded-2xl border border-sky-800/70 bg-[#071c30] shadow-xl shadow-slate-950/20"><div className="border-b border-sky-800/70 p-5"><div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-end"><div><h2 className="text-xl font-bold text-white">Resultados por equipe</h2><p className="mt-1 text-sm text-slate-300">{filtered.length} de {rows.length} registro(s) exibido(s) • INE e CNES preservados do arquivo de origem.</p></div>{def.kind === "oral" ? (
+  <label className="no-print w-full text-xs font-semibold text-slate-200 sm:w-64">
+    Ordenar equipes
+    <select
+      value={sortOrder}
+      onChange={(event) => setSortOrder(event.target.value as typeof sortOrder)}
+      className="mt-2 w-full rounded-lg border border-sky-800 bg-[#03111f] px-3 py-2.5 text-slate-100"
+    >
+      <option value="alphabetical">Ordem alfabética (A–Z)</option>
+      <option value="highest">Maior resultado primeiro</option>
+      <option value="lowest">Menor resultado primeiro</option>
+    </select>
+  </label>
+) : (
+  <span className="text-xs font-bold uppercase tracking-wider text-sky-300">Consulta pública</span>
+)}</div></div><div className="overflow-x-auto"><table className="w-full text-sm"><caption className="sr-only">Resultados por equipe</caption><thead className="bg-[#0b2943] text-xs uppercase tracking-wider text-sky-100"><tr><th scope="col" className="p-4 text-left">Equipe</th><th scope="col" className="p-4 text-left">INE</th>{def.kind === "quadrimestral" && <th scope="col" className="p-4 text-left">Dimensão / Indicador</th>}<th scope="col" className="p-4 text-center">Resultado</th>{def.kind === "quadrimestral" && <th scope="col" className="p-4 text-right">Nota final</th>}<th scope="col" className="p-4 text-left">Classificação</th></tr></thead><tbody>{sortedFiltered.map((row, index) => <tr key={`${row.ine}-${row.dimension}-${row.indicator}-${index}`} className={`border-t border-sky-900/70 align-top ${index % 2 ? "bg-[#061a2c]" : "bg-[#08223a]"} hover:bg-sky-900/30`}><td className="p-4"><b className="text-white">{formatUnitName(row.name)}</b>{row.cnes && <span className="ml-2 text-xs text-slate-300">– CNES {row.cnes}</span>}{row.metrics?.length ? <div className="mt-2 flex flex-wrap gap-1.5">{row.metrics.filter((metric) => !(def.kind === "territorial" && metric.label === "Pessoas vinculadas")).map((metric, metricIndex) => <span key={metricIndex} className="rounded-md border border-sky-800/70 bg-[#0b2943] px-2 py-1 text-xs text-sky-100">{metric.label}: <b>{metric.text || fmt(metric.value)}</b></span>)}</div> : null}</td><td className="p-4 font-mono text-xs text-sky-200">{row.ine}</td>{def.kind === "quadrimestral" && <td className="p-4 text-slate-100"><div>{row.dimension || "—"}</div>{row.indicator && <div className="mt-1 text-xs text-slate-300">{row.indicator}</div>}</td>}<td className="p-4 text-center text-base font-bold text-white"><div>{fmt(row.value)}</div>
+{def.kind === "oral" && (
+  <div className="mt-1">
+    <EvolutionIndicator
+      variation={oralVariationByTeam.get(teamKey(row))}
+      previousCompetence={previousPeriod}
+      unit=""
+    />
+  </div>
+)}
+{def.kind === "territorial" && exceedsPopulationParameter(row) && <span className="ml-2 inline-flex cursor-help items-center rounded-full border border-amber-300/50 bg-amber-400/10 px-2 py-0.5 text-xs font-black text-amber-200" title="Limite populacional excedido. A equipe ultrapassou o parâmetro populacional e atingiu a pontuação máxima de 10. O alerta indica a incidência do teto previsto para essa condição. A pontuação exibida é a informada pelo SIAPS, sem recálculo.">!</span>}</td>{def.kind === "quadrimestral" && <td className="p-4 text-right text-base font-bold text-white">{fmt(row.finalValue)}</td>}<td className="p-4"><ClassificationBadge text={effectiveClassification(row) || (id === "territorial" ? "Monitoramento mensal" : undefined)} /></td></tr>)}</tbody></table></div>{def.kind === "territorial" && filtered.some(exceedsPopulationParameter) && <p className="mt-3 text-xs text-amber-300"><b>!</b> indica equipe que ultrapassou o Parâmetro Populacional e atingiu a pontuação máxima de 10. A pontuação exibida permanece sendo o valor original informado pelo SIAPS, sem recálculo.</p>}</section>}
       </>}
       
       <p className="mt-5 flex gap-2 text-xs text-slate-300 no-print"><Info className="h-4 w-4 shrink-0 text-sky-300" />Fonte: arquivos SIAPS/e-SUS APS importados pela área administrativa. Os valores são apresentados conforme o arquivo de origem; não há recálculo silencioso no navegador.</p>

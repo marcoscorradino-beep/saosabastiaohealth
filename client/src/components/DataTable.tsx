@@ -1,3 +1,5 @@
+import EvolutionIndicator from "@/components/EvolutionIndicator";
+import { teamKey } from "@/lib/rankingEvolution";
 import ClassificationBadge from "@/components/ClassificationBadge";
 import { formatUnitName } from "@/lib/unitName";
 
@@ -9,9 +11,24 @@ interface Row {
   teamType: string;
   value: number | null;
   classification: string;
+  practices?: {
+    label: string;
+    value: number | null;
+  }[];
 }
 
-export default function DataTable({ rows }: { rows: readonly Row[] }) {
+export default function DataTable({
+  rows,
+  evolutionByTeam,
+  previousCompetence,
+}: {
+  rows: readonly Row[];
+  evolutionByTeam?: Map<string, {
+    variation: number | null;
+    movement: number | null;
+  }>;
+  previousCompetence?: string;
+}) {
   return (
     <div className="overflow-hidden rounded-2xl border border-sky-800/70 bg-[#071c30] shadow-xl shadow-slate-950/20">
       <div className="overflow-x-auto">
@@ -19,7 +36,7 @@ export default function DataTable({ rows }: { rows: readonly Row[] }) {
           <caption className="sr-only">Resultados por equipe</caption>
           <thead className="bg-[#0b2943] text-left text-xs uppercase tracking-wider text-sky-100">
             <tr>
-              {["Equipe", "INE", "Estabelecimento", "Resultado", "Classificação"].map((heading) => (
+              {["Equipe", "INE", "Resultado", "Classificação"].map((heading) => (
                 <th key={heading} scope="col" className="px-5 py-4 font-bold">
                   {heading}
                 </th>
@@ -34,14 +51,44 @@ export default function DataTable({ rows }: { rows: readonly Row[] }) {
                   index % 2 ? "bg-[#061a2c]" : "bg-[#08223a]"
                 }`}
               >
-                <td className="px-5 py-4 font-semibold text-white">{formatUnitName(row.name)}</td>
-                <td className="px-5 py-4 font-mono text-xs text-sky-200">{row.ine}</td>
-                <td className="px-5 py-4 text-slate-200">
-                  <div>{row.establishment}</div>
-                  {row.cnes && <div className="mt-1 text-xs text-slate-400">CNES {row.cnes}</div>}
+                <td className="px-5 py-4 font-semibold text-white">
+                  <div>
+                    {formatUnitName(row.name)}
+                    {row.cnes && (
+                      <span className="ml-2 text-xs font-normal text-slate-300">
+                        – CNES {row.cnes}
+                      </span>
+                    )}
+                  </div>
+                  {row.practices && row.practices.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {row.practices.map((practice, index) => (
+                        <span
+                          key={`${index}-${practice.label}`}
+                          className="rounded-md border border-sky-800/70 bg-[#0b2943] px-2 py-1 text-xs font-normal text-sky-100"
+                        >
+                          {practice.label}:{" "}
+                          <b className="font-semibold text-white">
+                            {practice.value == null
+                              ? "—"
+                              : practice.value.toLocaleString("pt-BR", {
+                                  maximumFractionDigits: 2,
+                                })}
+                          </b>
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </td>
-                <td className="px-5 py-4 text-right text-base font-bold text-white">
-                  {row.value == null ? "—" : `${row.value.toFixed(2)}%`}
+                <td className="px-5 py-4 font-mono text-xs text-sky-200">{row.ine}</td>
+                <td className="px-5 py-4 text-center text-base font-bold text-white">
+                  <div>{row.value == null ? "—" : `${row.value.toFixed(2)}%`}</div>
+                  <div className="mt-1">
+                    <EvolutionIndicator
+                      variation={evolutionByTeam?.get(teamKey(row))?.variation}
+                      previousCompetence={previousCompetence}
+                    />
+                  </div>
                 </td>
                 <td className="px-5 py-4">
                   <ClassificationBadge text={row.classification} />
